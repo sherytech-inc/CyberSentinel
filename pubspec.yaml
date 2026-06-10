@@ -1,0 +1,40 @@
+name: cybersentinel
+description: A cybersecurity dashboard application built with Flutter
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # State Management
+  provider: ^6.1.1
+  
+  # Navigation
+  go_router: ^13.0.0
+  
+  # Charts
+  fl_chart: ^0.66.0
+  
+  # Icons
+  lucide_icons_flutter: ^1.0.0
+  
+  # Fonts
+  google_fonts: ^6.1.0
+  
+  # Utilities
+  intl: ^0.19.0
+  
+  # HTTP (for future API integration)
+  http: ^1.2.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true

@@ -25,7 +25,7 @@ class SettingsScreen extends StatelessWidget {
                   const SizedBox(height: 24),
                   _buildThemeSection(provider),
                   const SizedBox(height: 24),
-                  _buildSaveButton(provider),
+                  _buildSaveButton(context, provider),
                 ],
               ),
             ),
@@ -34,6 +34,8 @@ class SettingsScreen extends StatelessWidget {
       },
     );
   }
+
+  // ── API Keys ───────────────────────────────────────────────────────────────
 
   Widget _buildAPIKeysSection(SettingsProvider provider) {
     return Container(
@@ -57,12 +59,18 @@ class SettingsScreen extends StatelessWidget {
                   children: [
                     Icon(LucideIcons.key, color: AppTheme.primary, size: 20),
                     SizedBox(width: 8),
-                    Text('API Keys', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                    Text(
+                      'API Keys',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                    ),
                   ],
                 ),
                 SizedBox(height: 4),
-                Text('Configure external service integrations',
-                    style: TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
+                Text(
+                  'Configure external service integrations',
+                  style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+                ),
               ],
             ),
           ),
@@ -70,14 +78,26 @@ class SettingsScreen extends StatelessWidget {
             padding: const EdgeInsets.all(24),
             child: Column(
               children: [
-                _buildTextField('VirusTotal API Key', provider.virusTotalApiKey,
-                    provider.setVirusTotalApiKey, 'Enter your VirusTotal API key'),
+                _buildTextField(
+                  'VirusTotal API Key',
+                  provider.virusTotalApiKey,
+                  provider.setVirusTotalApiKey,
+                  'Enter your VirusTotal API key',
+                ),
                 const SizedBox(height: 16),
-                _buildTextField('GeoIP API Key', provider.geoIPApiKey, provider.setGeoIPApiKey,
-                    'Enter your GeoIP API key'),
+                _buildTextField(
+                  'GeoIP API Key',
+                  provider.geoIPApiKey,
+                  provider.setGeoIPApiKey,
+                  'Enter your GeoIP API key',
+                ),
                 const SizedBox(height: 16),
-                _buildTextField('AbuseIPDB API Key', provider.abuseIPDBApiKey,
-                    provider.setAbuseIPDBApiKey, 'Enter your AbuseIPDB API key'),
+                _buildTextField(
+                  'AbuseIPDB API Key',
+                  provider.abuseIPDBApiKey,
+                  provider.setAbuseIPDBApiKey,
+                  'Enter your AbuseIPDB API key',
+                ),
               ],
             ),
           ),
@@ -86,11 +106,19 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTextField(String label, String value, Function(String) onChanged, String hint) {
+  Widget _buildTextField(
+    String label,
+    String value,
+    Function(String) onChanged,
+    String hint,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+        ),
         const SizedBox(height: 8),
         TextField(
           obscureText: true,
@@ -108,6 +136,8 @@ class SettingsScreen extends StatelessWidget {
       ],
     );
   }
+
+  // ── Monitoring ─────────────────────────────────────────────────────────────
 
   Widget _buildMonitoringSection(SettingsProvider provider) {
     return Container(
@@ -131,12 +161,18 @@ class SettingsScreen extends StatelessWidget {
                   children: [
                     Icon(LucideIcons.globe, color: AppTheme.primary, size: 20),
                     SizedBox(width: 8),
-                    Text('Monitoring', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                    Text(
+                      'Monitoring',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                    ),
                   ],
                 ),
                 SizedBox(height: 4),
-                Text('Configure background monitoring and scanning',
-                    style: TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
+                Text(
+                  'Configure background monitoring and scanning',
+                  style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+                ),
               ],
             ),
           ),
@@ -153,6 +189,8 @@ class SettingsScreen extends StatelessWidget {
       ),
     );
   }
+
+  // ── Alerts ─────────────────────────────────────────────────────────────────
 
   Widget _buildAlertsSection(SettingsProvider provider) {
     return Container(
@@ -176,12 +214,18 @@ class SettingsScreen extends StatelessWidget {
                   children: [
                     Icon(LucideIcons.bell, color: AppTheme.primary, size: 20),
                     SizedBox(width: 8),
-                    Text('Alerts', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                    Text(
+                      'Alerts',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                    ),
                   ],
                 ),
                 SizedBox(height: 4),
-                Text('Configure notification preferences',
-                    style: TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
+                Text(
+                  'Configure notification preferences',
+                  style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+                ),
               ],
             ),
           ),
@@ -189,11 +233,19 @@ class SettingsScreen extends StatelessWidget {
             padding: const EdgeInsets.all(24),
             child: Column(
               children: [
-                _buildToggleOption('Email Alerts', 'Receive threat alerts via email',
-                    provider.emailAlerts, provider.toggleEmailAlerts),
+                _buildToggleOption(
+                  'Email Alerts',
+                  'Receive threat alerts via email',
+                  provider.emailAlerts,
+                  provider.toggleEmailAlerts,
+                ),
                 const SizedBox(height: 16),
-                _buildToggleOption('Push Notifications', 'Receive real-time push notifications',
-                    provider.pushAlerts, provider.togglePushAlerts),
+                _buildToggleOption(
+                  'Push Notifications',
+                  'Receive real-time push notifications',
+                  provider.pushAlerts,
+                  provider.togglePushAlerts,
+                ),
               ],
             ),
           ),
@@ -203,7 +255,11 @@ class SettingsScreen extends StatelessWidget {
   }
 
   Widget _buildToggleOption(
-      String title, String description, bool value, VoidCallback onToggle) {
+    String title,
+    String description,
+    bool value,
+    VoidCallback onToggle,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -217,9 +273,17 @@ class SettingsScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                Text(
+                  title,
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w500),
+                ),
                 const SizedBox(height: 4),
-                Text(description, style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
+                Text(
+                  description,
+                  style: const TextStyle(
+                      fontSize: 14, color: AppTheme.textSecondary),
+                ),
               ],
             ),
           ),
@@ -252,6 +316,8 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
+  // ── Theme ──────────────────────────────────────────────────────────────────
+
   Widget _buildThemeSection(SettingsProvider provider) {
     return Container(
       decoration: BoxDecoration(
@@ -274,12 +340,18 @@ class SettingsScreen extends StatelessWidget {
                   children: [
                     Icon(LucideIcons.moon, color: AppTheme.primary, size: 20),
                     SizedBox(width: 8),
-                    Text('Appearance', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                    Text(
+                      'Appearance',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                    ),
                   ],
                 ),
                 SizedBox(height: 4),
-                Text('Customize the application theme',
-                    style: TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
+                Text(
+                  'Customize the application theme',
+                  style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+                ),
               ],
             ),
           ),
@@ -312,13 +384,20 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildThemeOption(String label, IconData icon, bool isSelected, VoidCallback onTap) {
+  Widget _buildThemeOption(
+    String label,
+    IconData icon,
+    bool isSelected,
+    VoidCallback onTap,
+  ) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isSelected ? AppTheme.primary.withOpacity(0.1) : AppTheme.borderPrimary,
+          color: isSelected
+              ? AppTheme.primary.withOpacity(0.1)
+              : AppTheme.borderPrimary,
           border: Border.all(
             color: isSelected ? AppTheme.primary : AppTheme.borderSecondary,
             width: 2,
@@ -328,7 +407,11 @@ class SettingsScreen extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 20, color: isSelected ? AppTheme.primary : AppTheme.textSecondary),
+            Icon(
+              icon,
+              size: 20,
+              color: isSelected ? AppTheme.primary : AppTheme.textSecondary,
+            ),
             const SizedBox(width: 8),
             Text(
               label,
@@ -344,16 +427,42 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSaveButton(SettingsProvider provider) {
+  // ── Save Button ────────────────────────────────────────────────────────────
+
+  Widget _buildSaveButton(BuildContext context, SettingsProvider provider) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton.icon(
-        onPressed: provider.saveSettings,
+        onPressed: () => _handleSave(context, provider),
         icon: const Icon(LucideIcons.save, size: 20),
         label: const Text('Save Settings'),
         style: ElevatedButton.styleFrom(
           backgroundColor: AppTheme.primary,
           padding: const EdgeInsets.symmetric(vertical: 16),
+        ),
+      ),
+    );
+  }
+
+  /// Saves settings and shows a confirmation snackbar.
+  /// When backend is ready, this will also persist to Supabase.
+  void _handleSave(BuildContext context, SettingsProvider provider) {
+    provider.saveSettings();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Row(
+          children: [
+            Icon(LucideIcons.circleCheck, color: Colors.white, size: 18),
+            SizedBox(width: 8),
+            Text('Settings saved successfully.'),
+          ],
+        ),
+        backgroundColor: AppTheme.success,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         ),
       ),
     );

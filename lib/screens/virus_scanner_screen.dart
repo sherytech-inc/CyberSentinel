@@ -34,6 +34,8 @@ class VirusScannerScreen extends StatelessWidget {
     );
   }
 
+  // ── Upload Section ─────────────────────────────────────────────────────────
+
   Widget _buildUploadSection(
       BuildContext context, VirusScannerProvider provider) {
     return Container(
@@ -55,13 +57,16 @@ class VirusScannerScreen extends StatelessWidget {
             style: TextStyle(color: AppTheme.textSecondary),
           ),
           const SizedBox(height: 32),
+
+          // ── Drop Zone ──
           Container(
             padding: const EdgeInsets.all(48),
             decoration: BoxDecoration(
               border: Border.all(
-                  color: AppTheme.borderSecondary,
-                  width: 2,
-                  style: BorderStyle.solid),
+                color: AppTheme.borderSecondary,
+                width: 2,
+                style: BorderStyle.solid,
+              ),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Column(
@@ -73,20 +78,25 @@ class VirusScannerScreen extends StatelessWidget {
                     color: AppTheme.primary.withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(LucideIcons.upload,
-                      color: AppTheme.primary, size: 32),
+                  child: const Icon(
+                    LucideIcons.upload,
+                    color: AppTheme.primary,
+                    size: 32,
+                  ),
                 ),
                 const SizedBox(height: 16),
-                const Text('Drop files here or click to browse',
-                    style:
-                        TextStyle(fontSize: 18, fontWeight: FontWeight.w500)),
+                const Text(
+                  'Drop files here or click to browse',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+                ),
                 const SizedBox(height: 8),
-                const Text('Maximum file size: 256 MB',
-                    style:
-                        TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
+                const Text(
+                  'Maximum file size: 256 MB',
+                  style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+                ),
                 const SizedBox(height: 16),
                 ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () => _handleSelectFile(context, provider),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primary,
                     padding: const EdgeInsets.symmetric(
@@ -97,7 +107,10 @@ class VirusScannerScreen extends StatelessWidget {
               ],
             ),
           ),
+
           const SizedBox(height: 24),
+
+          // ── URL Input ──
           TextField(
             decoration: InputDecoration(
               hintText: 'Or enter a URL to scan...',
@@ -111,12 +124,17 @@ class VirusScannerScreen extends StatelessWidget {
             ),
             onChanged: provider.setUrl,
           ),
+
           const SizedBox(height: 24),
+
+          // ── Scan Button ──
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: provider.isScanning ? null : provider.startScan,
-              icon: Icon(LucideIcons.scanSearch, size: 24),
+              onPressed: provider.isScanning
+                  ? null
+                  : () => _handleScan(context, provider),
+              icon: const Icon(LucideIcons.scanSearch, size: 24),
               label: Text(
                 provider.isScanning ? 'Scanning...' : 'Scan Now',
                 style: const TextStyle(fontSize: 18),
@@ -131,6 +149,62 @@ class VirusScannerScreen extends StatelessWidget {
       ),
     );
   }
+
+  // ── Handlers ───────────────────────────────────────────────────────────────
+
+  /// Informs the user that file picker requires backend/plugin integration.
+  /// Replace this with `file_picker` package logic when backend is ready.
+  void _handleSelectFile(BuildContext context, VirusScannerProvider provider) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Row(
+          children: [
+            Icon(LucideIcons.info, color: Colors.white, size: 18),
+            SizedBox(width: 8),
+            Text(
+                'File picker will be available once the backend is connected.'),
+          ],
+        ),
+        backgroundColor: AppTheme.info,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        ),
+      ),
+    );
+  }
+
+  /// Validates input before starting a scan.
+  void _handleScan(BuildContext context, VirusScannerProvider provider) {
+    final hasUrl = provider.url.trim().isNotEmpty;
+
+    if (!hasUrl) {
+      // No file selected and no URL entered — tell the user
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(LucideIcons.triangleAlert, color: Colors.white, size: 18),
+              SizedBox(width: 8),
+              Text('Please select a file or enter a URL before scanning.'),
+            ],
+          ),
+          backgroundColor: AppTheme.warning,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+          ),
+        ),
+      );
+      return;
+    }
+
+    provider.startScan();
+  }
+
+  // ── Results ────────────────────────────────────────────────────────────────
 
   Widget _buildResults(ScanResult result) {
     final config = _getThreatConfig(result.threatLevel);
@@ -147,11 +221,15 @@ class VirusScannerScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Scan Results',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
-              Text(result.fileName,
-                  style: const TextStyle(
-                      fontSize: 14, color: AppTheme.textSecondary)),
+              const Text(
+                'Scan Results',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+              ),
+              Text(
+                result.fileName,
+                style: const TextStyle(
+                    fontSize: 14, color: AppTheme.textSecondary),
+              ),
             ],
           ),
           const SizedBox(height: 24),
@@ -174,12 +252,14 @@ class VirusScannerScreen extends StatelessWidget {
                         Text(
                           '${result.threatLevel.name.toUpperCase()} RISK',
                           style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: config.color),
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: config.color,
+                          ),
                         ),
                         Text(
-                          'Detected by ${result.enginesDetected} of ${result.totalEngines} security engines',
+                          'Detected by ${result.enginesDetected} of '
+                          '${result.totalEngines} security engines',
                           style: const TextStyle(
                               fontSize: 14, color: AppTheme.textSecondary),
                         ),
@@ -210,34 +290,41 @@ class VirusScannerScreen extends StatelessWidget {
           ),
           if (result.detections.isNotEmpty) ...[
             const SizedBox(height: 24),
-            Text('Detections (${result.detections.length})',
-                style:
-                    const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+            Text(
+              'Detections (${result.detections.length})',
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+            ),
             const SizedBox(height: 12),
-            ...result.detections.map((d) => Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppTheme.borderPrimary,
-                    border: Border.all(color: AppTheme.borderSecondary),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(LucideIcons.triangleAlert,
-                          color: AppTheme.warning, size: 16),
-                      const SizedBox(width: 12),
-                      Text(d,
-                          style: const TextStyle(
-                              fontFamily: 'monospace', fontSize: 14)),
-                    ],
-                  ),
-                )),
+            ...result.detections.map(
+              (d) => Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.borderPrimary,
+                  border: Border.all(color: AppTheme.borderSecondary),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(LucideIcons.triangleAlert,
+                        color: AppTheme.warning, size: 16),
+                    const SizedBox(width: 12),
+                    Text(
+                      d,
+                      style: const TextStyle(
+                          fontFamily: 'monospace', fontSize: 14),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ],
       ),
     );
   }
+
+  // ── Info Note ──────────────────────────────────────────────────────────────
 
   Widget _buildInfoNote() {
     return Container(
@@ -248,11 +335,14 @@ class VirusScannerScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
       ),
       child: const Text(
-        'Note: This scanner uses VirusTotal API. Connect your API key in Settings to enable real scanning.',
+        'Note: This scanner uses VirusTotal API. '
+        'Connect your API key in Settings to enable real scanning.',
         style: TextStyle(fontSize: 14, color: AppTheme.info),
       ),
     );
   }
+
+  // ── Threat Config Helper ───────────────────────────────────────────────────
 
   ThreatConfig _getThreatConfig(ScanThreatLevel level) {
     switch (level) {
@@ -294,6 +384,8 @@ class VirusScannerScreen extends StatelessWidget {
     }
   }
 }
+
+// ── Supporting Class ───────────────────────────────────────────────────────
 
 class ThreatConfig {
   final IconData icon;

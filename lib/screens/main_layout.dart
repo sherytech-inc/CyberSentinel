@@ -1,80 +1,139 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:go_router/go_router.dart';
 import '../core/theme/app_theme.dart';
 import '../providers/app_state_provider.dart';
 import '../widgets/chatbot/chatbot_widget.dart';
 
-class MainLayout extends StatelessWidget {
-  final Widget child;
+class _NavItem {
+  final String route;
+  final String label;
+  final IconData icon;
 
-  const MainLayout({super.key, required this.child});
+  const _NavItem({
+    required this.route,
+    required this.label,
+    required this.icon,
+  });
+}
+
+class MainLayout extends StatelessWidget {
+  final Widget? child;
+
+  const MainLayout({super.key, this.child});
+
+  // Dashboard uses '/' to match GoRouter — all others match their GoRoute path
+  static const List<_NavItem> _navItems = [
+    _NavItem(route: '/', label: 'Dashboard', icon: LucideIcons.layoutDashboard),
+    _NavItem(
+        route: '/packet-tracing',
+        label: 'Packet Tracing',
+        icon: LucideIcons.activity),
+    _NavItem(
+        route: '/firewall-logs',
+        label: 'Firewall Logs',
+        icon: LucideIcons.shield),
+    _NavItem(
+        route: '/virus-scanner',
+        label: 'Virus Scanner',
+        icon: LucideIcons.scanSearch),
+    _NavItem(
+        route: '/ip-analysis', label: 'IP Analysis', icon: LucideIcons.globe),
+    _NavItem(route: '/reports', label: 'Reports', icon: LucideIcons.chartBar),
+    _NavItem(route: '/settings', label: 'Settings', icon: LucideIcons.settings),
+  ];
 
   @override
   Widget build(BuildContext context) {
-    final isDesktop = AppTheme.isDesktop(context);
+    // Sync AppStateProvider with GoRouter's actual current location.
+    // This keeps the sidebar highlight and page title correct on deep links,
+    // browser back/forward, and programmatic navigation.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final location = GoRouterState.of(context).matchedLocation;
+      context.read<AppStateProvider>().setCurrentRoute(location);
+    });
 
-    return Scaffold(
-      backgroundColor: AppTheme.bgPrimary,
-      body: Stack(
-        children: [
-          isDesktop ? _buildDesktopLayout(context) : _buildMobileLayout(context),
-          const ChatbotWidget(),
-        ],
-      ),
-      bottomNavigationBar: isDesktop ? null : _buildBottomNav(context),
-    );
-  }
-
-  Widget _buildDesktopLayout(BuildContext context) {
-    return Row(
-      children: [
-        _buildSidebar(context),
-        Expanded(
-          child: Column(
+    return Consumer<AppStateProvider>(
+      builder: (context, appState, _) {
+        return Scaffold(
+          backgroundColor: AppTheme.bgPrimary,
+          body: Stack(
             children: [
-              _buildTopBar(context),
-              Expanded(
-                child: Container(
-                  color: AppTheme.bgPrimary,
-                  padding: const EdgeInsets.all(AppTheme.spacing32),
-                  child: child,
-                ),
+              Row(
+                children: [
+                  _Sidebar(
+                    navItems: _navItems,
+                    currentRoute: appState.currentRoute,
+                    onRouteSelected: (route) {
+                      context.go(route);
+                      appState.setCurrentRoute(route);
+                    },
+                  ),
+                  Expanded(
+                    child: Column(
+                      children: [
+                        _TopBar(title: appState.pageTitle),
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.all(AppTheme.spacing24),
+                            // [child] is the screen GoRouter injects via ShellRoute.
+                            // Fallback to DashboardScreen never fires in practice
+                            // because GoRouter always provides a child, but keeps
+                            // the widget tree valid during hot reload edge cases.
+                            child: child ?? const SizedBox.shrink(),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
+              const ChatbotWidget(),
             ],
           ),
-        ),
-      ],
+        );
+      },
     );
   }
+}
 
-  Widget _buildMobileLayout(BuildContext context) {
-    return Column(
-      children: [
-        _buildMobileHeader(context),
-        Expanded(
-          child: Container(
-            color: AppTheme.bgPrimary,
-            padding: const EdgeInsets.all(AppTheme.spacing16),
-            child: child,
-          ),
-        ),
-      ],
-    );
-  }
+// ── Sidebar ────────────────────────────────────────────────────────────────
 
-  Widget _buildSidebar(BuildContext context) {
+class _Sidebar extends StatelessWidget {
+  final List<_NavItem> navItems;
+  final String currentRoute;
+  final ValueChanged<String> onRouteSelected;
+
+  const _Sidebar({
+    required this.navItems,
+    required this.currentRoute,
+    required this.onRouteSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      width: AppTheme.sidebarWidth,
+      width: 240,
       color: AppTheme.bgSecondary,
       child: Column(
         children: [
           _buildLogo(),
+          const Divider(color: AppTheme.borderPrimary, height: 1),
           Expanded(
-            child: _buildNavigation(context),
+            child: ListView(
+              padding: const EdgeInsets.symmetric(vertical: AppTheme.spacing8),
+              children: navItems
+                  .map((item) => _NavTile(
+                        item: item,
+                        isSelected: currentRoute == item.route,
+                        onTap: () => onRouteSelected(item.route),
+                      ))
+                  .toList(),
+            ),
           ),
-          _buildSystemStatus(),
+          const Divider(color: AppTheme.borderPrimary, height: 1),
+          _buildUserFooter(),
         ],
       ),
     );
@@ -82,26 +141,27 @@ class MainLayout extends StatelessWidget {
 
   Widget _buildLogo() {
     return Container(
-      height: 64,
-      padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacing24),
-      decoration: const BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: AppTheme.borderPrimary),
-        ),
-      ),
+      padding: const EdgeInsets.all(AppTheme.spacing24),
       child: Row(
         children: [
-          Icon(
-            LucideIcons.shield,
-            color: AppTheme.primary,
-            size: 24,
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [AppTheme.primary, Color(0xFF2563EB)],
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child:
+                const Icon(LucideIcons.shield, color: Colors.white, size: 20),
           ),
-          const SizedBox(width: AppTheme.spacing12),
+          const SizedBox(width: 12),
           const Text(
             'CyberSentinel',
             style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
               color: AppTheme.textPrimary,
             ),
           ),
@@ -110,62 +170,92 @@ class MainLayout extends StatelessWidget {
     );
   }
 
-  Widget _buildNavigation(BuildContext context) {
-    final navItems = [
-      NavItem(path: '/', label: 'Dashboard', icon: LucideIcons.layoutDashboard),
-      NavItem(path: '/packet-tracing', label: 'Packet Tracing', icon: LucideIcons.network),
-      NavItem(path: '/firewall-logs', label: 'Firewall Logs', icon: LucideIcons.shield),
-      NavItem(path: '/virus-scanner', label: 'Virus Scanner', icon: LucideIcons.scanSearch),
-      NavItem(path: '/ip-analysis', label: 'IP Analysis', icon: LucideIcons.mapPin),
-      NavItem(path: '/reports', label: 'Reports', icon: LucideIcons.fileText),
-      NavItem(path: '/settings', label: 'Settings', icon: LucideIcons.settings),
-    ];
-
-    return ListView(
-      padding: const EdgeInsets.all(AppTheme.spacing12),
-      children: navItems.map((item) => _buildNavItem(context, item)).toList(),
+  Widget _buildUserFooter() {
+    return Container(
+      padding: const EdgeInsets.all(AppTheme.spacing16),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 16,
+            backgroundColor: AppTheme.primary.withOpacity(0.2),
+            child:
+                const Icon(LucideIcons.user, size: 16, color: AppTheme.primary),
+          ),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'SOC Analyst',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                ),
+                Text(
+                  'analyst@cybersentinel.io',
+                  style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
+}
 
-  Widget _buildNavItem(BuildContext context, NavItem item) {
-    final currentLocation = GoRouterState.of(context).uri.toString();
-    final isActive = item.path == '/'
-        ? currentLocation == '/'
-        : currentLocation.startsWith(item.path);
+// ── Nav Tile ───────────────────────────────────────────────────────────────
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: AppTheme.spacing4),
+class _NavTile extends StatelessWidget {
+  final _NavItem item;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _NavTile({
+    required this.item,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppTheme.spacing8, vertical: 2),
       child: Material(
-        color: Colors.transparent,
+        color: isSelected
+            ? AppTheme.primary.withOpacity(0.15)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         child: InkWell(
-          onTap: () => context.go(item.path),
           borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+          onTap: onTap,
           child: Container(
             padding: const EdgeInsets.symmetric(
-              horizontal: AppTheme.spacing12,
-              vertical: AppTheme.spacing12,
-            ),
-            decoration: BoxDecoration(
-              color: isActive ? AppTheme.primary.withOpacity(0.1) : Colors.transparent,
-              border: Border.all(
-                color: isActive ? AppTheme.primary.withOpacity(0.2) : Colors.transparent,
-              ),
-              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-            ),
+                horizontal: AppTheme.spacing12, vertical: AppTheme.spacing8),
+            decoration: isSelected
+                ? BoxDecoration(
+                    border: Border(
+                      left: BorderSide(color: AppTheme.primary, width: 3),
+                    ),
+                  )
+                : null,
             child: Row(
               children: [
                 Icon(
                   item.icon,
-                  size: 20,
-                  color: isActive ? AppTheme.primary : AppTheme.textSecondary,
+                  size: 18,
+                  color: isSelected ? AppTheme.primary : AppTheme.textSecondary,
                 ),
                 const SizedBox(width: AppTheme.spacing12),
                 Text(
                   item.label,
                   style: TextStyle(
                     fontSize: 14,
-                    color: isActive ? AppTheme.primary : AppTheme.textSecondary,
-                    fontWeight: isActive ? FontWeight.w500 : FontWeight.normal,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                    color: isSelected
+                        ? AppTheme.textPrimary
+                        : AppTheme.textSecondary,
                   ),
                 ),
               ],
@@ -175,78 +265,29 @@ class MainLayout extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildSystemStatus() {
-    return Container(
-      padding: const EdgeInsets.all(AppTheme.spacing16),
-      decoration: const BoxDecoration(
-        border: Border(
-          top: BorderSide(color: AppTheme.borderPrimary),
-        ),
-      ),
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppTheme.spacing12,
-          vertical: AppTheme.spacing8,
-        ),
-        decoration: BoxDecoration(
-          color: AppTheme.borderPrimary,
-          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'System Status',
-              style: TextStyle(
-                fontSize: 12,
-                color: AppTheme.textSecondary,
-              ),
-            ),
-            Row(
-              children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    color: AppTheme.error,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: AppTheme.spacing8),
-                const Text(
-                  'LIVE',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.error,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+// ── Top Bar ────────────────────────────────────────────────────────────────
 
-  Widget _buildTopBar(BuildContext context) {
-    final appState = Provider.of<AppStateProvider>(context);
+class _TopBar extends StatelessWidget {
+  final String title;
 
+  const _TopBar({required this.title});
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       height: 64,
-      padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacing32),
+      padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacing24),
       decoration: const BoxDecoration(
         color: AppTheme.bgSecondary,
-        border: Border(
-          bottom: BorderSide(color: AppTheme.borderPrimary),
-        ),
+        border: Border(bottom: BorderSide(color: AppTheme.borderPrimary)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            appState.getPageTitle(),
+            title,
             style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w600,
@@ -255,145 +296,18 @@ class MainLayout extends StatelessWidget {
           ),
           Row(
             children: [
-              SizedBox(
-                width: 320,
-                child: TextField(
-                  decoration: InputDecoration(
-                    hintText: 'Global search...',
-                    hintStyle: const TextStyle(
-                      color: AppTheme.textTertiary,
-                      fontSize: 14,
-                    ),
-                    prefixIcon: const Icon(
-                      LucideIcons.search,
-                      size: 18,
-                      color: AppTheme.textTertiary,
-                    ),
-                    filled: true,
-                    fillColor: AppTheme.borderPrimary,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                      borderSide: const BorderSide(color: AppTheme.borderSecondary),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                      borderSide: const BorderSide(color: AppTheme.borderSecondary),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                      borderSide: BorderSide(color: AppTheme.primary.withOpacity(0.5)),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: AppTheme.spacing16,
-                      vertical: AppTheme.spacing8,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppTheme.spacing24),
-              _buildNotificationButton(),
-              const SizedBox(width: AppTheme.spacing12),
-              _buildProfileButton(),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNotificationButton() {
-    return Stack(
-      children: [
-        IconButton(
-          onPressed: () {},
-          icon: const Icon(
-            LucideIcons.bell,
-            color: AppTheme.textSecondary,
-          ),
-        ),
-        Positioned(
-          right: 8,
-          top: 8,
-          child: Container(
-            width: 8,
-            height: 8,
-            decoration: const BoxDecoration(
-              color: AppTheme.error,
-              shape: BoxShape.circle,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildProfileButton() {
-    return Container(
-      width: 32,
-      height: 32,
-      decoration: BoxDecoration(
-        color: AppTheme.primary.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-      ),
-      child: const Icon(
-        LucideIcons.user,
-        color: AppTheme.primary,
-        size: 20,
-      ),
-    );
-  }
-
-  Widget _buildMobileHeader(BuildContext context) {
-    return Container(
-      height: 64,
-      padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacing16),
-      decoration: const BoxDecoration(
-        color: AppTheme.bgSecondary,
-        border: Border(
-          bottom: BorderSide(color: AppTheme.borderPrimary),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Icon(
-                LucideIcons.shield,
-                color: AppTheme.primary,
-                size: 24,
-              ),
-              const SizedBox(width: AppTheme.spacing8),
-              const Text(
-                'CyberSentinel',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-            ],
-          ),
-          Stack(
-            children: [
               IconButton(
+                icon: const Icon(LucideIcons.bell,
+                    size: 20, color: AppTheme.textSecondary),
                 onPressed: () {},
-                icon: const Icon(
-                  LucideIcons.bell,
-                  color: AppTheme.textSecondary,
-                ),
+                tooltip: 'Notifications',
               ),
-              Positioned(
-                right: 8,
-                top: 8,
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    color: AppTheme.error,
-                    shape: BoxShape.circle,
-                  ),
-                ),
+              const SizedBox(width: 8),
+              IconButton(
+                icon: const Icon(LucideIcons.settings,
+                    size: 20, color: AppTheme.textSecondary),
+                onPressed: () {},
+                tooltip: 'Settings',
               ),
             ],
           ),
@@ -401,64 +315,4 @@ class MainLayout extends StatelessWidget {
       ),
     );
   }
-
-  Widget _buildBottomNav(BuildContext context) {
-    final currentLocation = GoRouterState.of(context).uri.toString();
-
-    final navItems = [
-      NavItem(path: '/', label: 'Dashboard', icon: LucideIcons.layoutDashboard),
-      NavItem(path: '/packet-tracing', label: 'Packet', icon: LucideIcons.network),
-      NavItem(path: '/firewall-logs', label: 'Firewall', icon: LucideIcons.shield),
-      NavItem(path: '/virus-scanner', label: 'Scanner', icon: LucideIcons.scanSearch),
-      NavItem(path: '/reports', label: 'Reports', icon: LucideIcons.fileText),
-    ];
-
-    return Container(
-      height: 64,
-      decoration: const BoxDecoration(
-        color: AppTheme.bgSecondary,
-        border: Border(
-          top: BorderSide(color: AppTheme.borderPrimary),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: navItems.map((item) {
-          final isActive = item.path == '/'
-              ? currentLocation == '/'
-              : currentLocation.startsWith(item.path);
-
-          return InkWell(
-            onTap: () => context.go(item.path),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  item.icon,
-                  size: 20,
-                  color: isActive ? AppTheme.primary : AppTheme.textTertiary,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  item.label,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isActive ? AppTheme.primary : AppTheme.textTertiary,
-                  ),
-                ),
-              ],
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-}
-
-class NavItem {
-  final String path;
-  final String label;
-  final IconData icon;
-
-  NavItem({required this.path, required this.label, required this.icon});
 }

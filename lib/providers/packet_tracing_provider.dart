@@ -6,12 +6,12 @@ class PacketTracingProvider extends ChangeNotifier {
   Packet? _selectedPacket;
   String _protocolFilter = 'all';
   String _riskFilter = 'all';
-  
+
   bool get isCapturing => _isCapturing;
   Packet? get selectedPacket => _selectedPacket;
   String get protocolFilter => _protocolFilter;
   String get riskFilter => _riskFilter;
-  
+
   final List<Packet> _packets = [
     Packet(
       id: '1',
@@ -59,26 +59,69 @@ class PacketTracingProvider extends ChangeNotifier {
       timestamp: '14:23:49',
     ),
   ];
-  
-  List<Packet> get packets => _packets;
-  
+
+  /// Returns the filtered packet list based on active protocol and risk filters.
+  List<Packet> get packets {
+    return _packets.where((packet) {
+      // --- Protocol filter ---
+      // Dropdown values are lowercase ('http', 'ssh', 'ftp', 'dns').
+      // Packet protocols are mixed case ('HTTP', 'HTTPS', 'SSH', 'MySQL').
+      // We treat 'http' as matching both HTTP and HTTPS.
+      final bool protocolMatch = () {
+        if (_protocolFilter == 'all') return true;
+        if (_protocolFilter == 'http') {
+          return packet.protocol.toUpperCase() == 'HTTP' ||
+              packet.protocol.toUpperCase() == 'HTTPS';
+        }
+        return packet.protocol.toLowerCase() == _protocolFilter.toLowerCase();
+      }();
+
+      // --- Risk filter ---
+      final bool riskMatch = () {
+        if (_riskFilter == 'all') return true;
+        switch (_riskFilter) {
+          case 'normal':
+            return packet.status == PacketStatus.normal;
+          case 'suspicious':
+            return packet.status == PacketStatus.suspicious;
+          case 'malicious':
+            return packet.status == PacketStatus.malicious;
+          default:
+            return true;
+        }
+      }();
+
+      return protocolMatch && riskMatch;
+    }).toList();
+  }
+
   void toggleCapturing() {
     _isCapturing = !_isCapturing;
     notifyListeners();
   }
-  
+
   void selectPacket(Packet packet) {
     _selectedPacket = packet;
     notifyListeners();
   }
-  
+
   void setProtocolFilter(String filter) {
     _protocolFilter = filter;
+    // Clear selected packet if it no longer appears in the filtered list
+    if (_selectedPacket != null &&
+        !packets.any((p) => p.id == _selectedPacket!.id)) {
+      _selectedPacket = null;
+    }
     notifyListeners();
   }
-  
+
   void setRiskFilter(String filter) {
     _riskFilter = filter;
+    // Clear selected packet if it no longer appears in the filtered list
+    if (_selectedPacket != null &&
+        !packets.any((p) => p.id == _selectedPacket!.id)) {
+      _selectedPacket = null;
+    }
     notifyListeners();
   }
 }

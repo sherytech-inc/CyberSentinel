@@ -28,6 +28,11 @@ class ChatbotWidget extends StatefulWidget {
 class _ChatbotWidgetState extends State<ChatbotWidget>
     with SingleTickerProviderStateMixin {
   bool _isOpen = false;
+
+  /// Whether the text field currently has any non-whitespace input.
+  /// Used to control the send button gradient reactively.
+  bool _hasText = false;
+
   final List<Message> _messages = [
     Message(
       id: '1',
@@ -37,6 +42,7 @@ class _ChatbotWidgetState extends State<ChatbotWidget>
       timestamp: DateTime.now(),
     ),
   ];
+
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _isTyping = false;
@@ -46,6 +52,7 @@ class _ChatbotWidgetState extends State<ChatbotWidget>
   @override
   void initState() {
     super.initState();
+
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
@@ -54,10 +61,23 @@ class _ChatbotWidgetState extends State<ChatbotWidget>
       parent: _animationController,
       curve: Curves.easeInOut,
     );
+
+    // Listen to text changes so the send button gradient updates reactively.
+    // The original code read _textController.text directly inside the build
+    // method without a listener, so the button never changed colour.
+    _textController.addListener(_onTextChanged);
+  }
+
+  void _onTextChanged() {
+    final hasText = _textController.text.trim().isNotEmpty;
+    if (hasText != _hasText) {
+      setState(() => _hasText = hasText);
+    }
   }
 
   @override
   void dispose() {
+    _textController.removeListener(_onTextChanged);
     _textController.dispose();
     _scrollController.dispose();
     _animationController.dispose();
@@ -101,12 +121,13 @@ class _ChatbotWidgetState extends State<ChatbotWidget>
     setState(() {
       _messages.add(userMessage);
       _textController.clear();
+      // _hasText resets via the listener automatically on clear()
       _isTyping = true;
     });
 
     _scrollToBottom();
 
-    // Simulate bot response
+    // Simulate bot response delay
     await Future.delayed(const Duration(milliseconds: 1500));
 
     final botResponse = _generateBotResponse(text);
@@ -153,7 +174,7 @@ class _ChatbotWidgetState extends State<ChatbotWidget>
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // Floating Action Button
+        // ── Floating Action Button ────────────────────────────────────────
         Positioned(
           bottom: 24,
           right: 24,
@@ -190,7 +211,9 @@ class _ChatbotWidgetState extends State<ChatbotWidget>
                 child: Icon(
                   _isOpen ? LucideIcons.x : LucideIcons.messageCircle,
                   key: ValueKey(_isOpen),
-                  color: _isOpen ? const Color(0xFFD1D5DB) : const Color(0xFF06B6D4),
+                  color: _isOpen
+                      ? const Color(0xFFD1D5DB)
+                      : const Color(0xFF06B6D4),
                   size: 24,
                 ),
               ),
@@ -198,7 +221,7 @@ class _ChatbotWidgetState extends State<ChatbotWidget>
           ),
         ),
 
-        // Chat Panel
+        // ── Chat Panel ────────────────────────────────────────────────────
         if (_isOpen)
           Positioned(
             bottom: 96,
@@ -219,213 +242,9 @@ class _ChatbotWidgetState extends State<ChatbotWidget>
                   ),
                   child: Column(
                     children: [
-                      // Header
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [
-                              Color(0xFF1A1F2E),
-                              Color(0xFF1E2938),
-                              Color(0xFF1A1F2E),
-                            ],
-                          ),
-                          border: Border(
-                            bottom: BorderSide(
-                              color: const Color(0xFF06B6D4).withOpacity(0.2),
-                              width: 1,
-                            ),
-                          ),
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(16),
-                            topRight: Radius.circular(16),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    const Color(0xFF06B6D4).withOpacity(0.2),
-                                    const Color(0xFF2563EB).withOpacity(0.2),
-                                  ],
-                                ),
-                                border: Border.all(
-                                  color: const Color(0xFF06B6D4).withOpacity(0.3),
-                                  width: 1,
-                                ),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: const Icon(
-                                LucideIcons.bot,
-                                color: Color(0xFF06B6D4),
-                                size: 24,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            const Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'CyberSentinel AI',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  Text(
-                                    'Security Assistant',
-                                    style: TextStyle(
-                                      color: Color(0xFF9CA3AF),
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF10B981),
-                                borderRadius: BorderRadius.circular(4),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFF10B981).withOpacity(0.5),
-                                    blurRadius: 4,
-                                    spreadRadius: 0,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // Messages Area
-                      Expanded(
-                        child: ListView.builder(
-                          controller: _scrollController,
-                          padding: const EdgeInsets.all(16),
-                          itemCount: _messages.length + (_isTyping ? 1 : 0),
-                          itemBuilder: (context, index) {
-                            if (_isTyping && index == _messages.length) {
-                              return _buildTypingIndicator();
-                            }
-                            return _buildMessageBubble(_messages[index]);
-                          },
-                        ),
-                      ),
-
-                      // Input Area
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF0A0E1A),
-                          border: Border(
-                            top: BorderSide(color: Color(0xFF1A1F2E)),
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: TextField(
-                                    controller: _textController,
-                                    style: const TextStyle(color: Colors.white),
-                                    decoration: InputDecoration(
-                                      hintText: 'Type your message...',
-                                      hintStyle: const TextStyle(
-                                        color: Color(0xFF6B7280),
-                                        fontSize: 14,
-                                      ),
-                                      filled: true,
-                                      fillColor: const Color(0xFF1A1F2E),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: const BorderSide(
-                                          color: Color(0xFF2A2F3E),
-                                        ),
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: const BorderSide(
-                                          color: Color(0xFF2A2F3E),
-                                        ),
-                                      ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: const BorderSide(
-                                          color: Color(0xFF06B6D4),
-                                        ),
-                                      ),
-                                      contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 12,
-                                      ),
-                                    ),
-                                    onSubmitted: (_) => _sendMessage(),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Container(
-                                  decoration: BoxDecoration(
-                                    gradient: _textController.text.trim().isEmpty
-                                        ? const LinearGradient(
-                                            begin: Alignment.topLeft,
-                                            end: Alignment.bottomRight,
-                                            colors: [
-                                              Color(0xFF374151),
-                                              Color(0xFF1F2937),
-                                            ],
-                                          )
-                                        : const LinearGradient(
-                                            begin: Alignment.topLeft,
-                                            end: Alignment.bottomRight,
-                                            colors: [
-                                              Color(0xFF0891B2),
-                                              Color(0xFF0E7490),
-                                            ],
-                                          ),
-                                    border: Border.all(
-                                      color: _textController.text.trim().isEmpty
-                                          ? const Color(0xFF4B5563)
-                                          : const Color(0xFF06B6D4)
-                                              .withOpacity(0.3),
-                                      width: 1,
-                                    ),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: IconButton(
-                                    onPressed: _sendMessage,
-                                    icon: const Icon(
-                                      LucideIcons.send,
-                                      color: Colors.white,
-                                      size: 20,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'AI-powered security assistant',
-                              style: TextStyle(
-                                color: Color(0xFF6B7280),
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                      _buildHeader(),
+                      Expanded(child: _buildMessagesList()),
+                      _buildInputArea(),
                     ],
                   ),
                 ),
@@ -435,6 +254,216 @@ class _ChatbotWidgetState extends State<ChatbotWidget>
       ],
     );
   }
+
+  // ── Chat Header ────────────────────────────────────────────────────────────
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFF1A1F2E),
+            Color(0xFF1E2938),
+            Color(0xFF1A1F2E),
+          ],
+        ),
+        border: Border(
+          bottom: BorderSide(
+            color: const Color(0xFF06B6D4).withOpacity(0.2),
+            width: 1,
+          ),
+        ),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(16),
+          topRight: Radius.circular(16),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  const Color(0xFF06B6D4).withOpacity(0.2),
+                  const Color(0xFF2563EB).withOpacity(0.2),
+                ],
+              ),
+              border: Border.all(
+                color: const Color(0xFF06B6D4).withOpacity(0.3),
+                width: 1,
+              ),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Icon(
+              LucideIcons.bot,
+              color: Color(0xFF06B6D4),
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'CyberSentinel AI',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  'Security Assistant',
+                  style: TextStyle(
+                    color: Color(0xFF9CA3AF),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: const Color(0xFF10B981),
+              borderRadius: BorderRadius.circular(4),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF10B981).withOpacity(0.5),
+                  blurRadius: 4,
+                  spreadRadius: 0,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Messages List ──────────────────────────────────────────────────────────
+
+  Widget _buildMessagesList() {
+    return ListView.builder(
+      controller: _scrollController,
+      padding: const EdgeInsets.all(16),
+      itemCount: _messages.length + (_isTyping ? 1 : 0),
+      itemBuilder: (context, index) {
+        if (_isTyping && index == _messages.length) {
+          return _buildTypingIndicator();
+        }
+        return _buildMessageBubble(_messages[index]);
+      },
+    );
+  }
+
+  // ── Input Area ─────────────────────────────────────────────────────────────
+
+  Widget _buildInputArea() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: const BoxDecoration(
+        color: Color(0xFF0A0E1A),
+        border: Border(top: BorderSide(color: Color(0xFF1A1F2E))),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _textController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    hintText: 'Type your message...',
+                    hintStyle: const TextStyle(
+                      color: Color(0xFF6B7280),
+                      fontSize: 14,
+                    ),
+                    filled: true,
+                    fillColor: const Color(0xFF1A1F2E),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFF2A2F3E)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFF2A2F3E)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFF06B6D4)),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                  ),
+                  onSubmitted: (_) => _sendMessage(),
+                ),
+              ),
+              const SizedBox(width: 8),
+
+              // Send button — gradient now reacts to _hasText
+              Container(
+                decoration: BoxDecoration(
+                  gradient: _hasText
+                      ? const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Color(0xFF0891B2),
+                            Color(0xFF0E7490),
+                          ],
+                        )
+                      : const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Color(0xFF374151),
+                            Color(0xFF1F2937),
+                          ],
+                        ),
+                  border: Border.all(
+                    color: _hasText
+                        ? const Color(0xFF06B6D4).withOpacity(0.3)
+                        : const Color(0xFF4B5563),
+                    width: 1,
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: IconButton(
+                  onPressed: _sendMessage,
+                  icon: const Icon(
+                    LucideIcons.send,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'AI-powered security assistant',
+            style: TextStyle(
+              color: Color(0xFF6B7280),
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Message Bubble ─────────────────────────────────────────────────────────
 
   Widget _buildMessageBubble(Message message) {
     final isUser = message.sender == MessageSender.user;
@@ -558,6 +587,8 @@ class _ChatbotWidgetState extends State<ChatbotWidget>
     );
   }
 
+  // ── Typing Indicator ───────────────────────────────────────────────────────
+
   Widget _buildTypingIndicator() {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -622,9 +653,10 @@ class _ChatbotWidgetState extends State<ChatbotWidget>
   }
 }
 
+// ── Animated Dot ───────────────────────────────────────────────────────────
+
 class _AnimatedDot extends StatefulWidget {
   final int delay;
-
   const _AnimatedDot({required this.delay});
 
   @override
@@ -644,9 +676,7 @@ class _AnimatedDotState extends State<_AnimatedDot>
     )..repeat();
 
     Future.delayed(Duration(milliseconds: widget.delay), () {
-      if (mounted) {
-        _controller.forward();
-      }
+      if (mounted) _controller.forward();
     });
   }
 

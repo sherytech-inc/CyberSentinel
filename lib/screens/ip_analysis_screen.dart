@@ -19,6 +19,11 @@ class IPAnalysisScreen extends StatelessWidget {
               child: Column(
                 children: [
                   _buildSearchBar(provider),
+                  // Show validation error if present
+                  if (provider.errorMessage != null) ...[
+                    const SizedBox(height: 12),
+                    _buildErrorBanner(provider.errorMessage!),
+                  ],
                   const SizedBox(height: 24),
                   if (provider.ipInfo != null) ...[
                     _buildInfoCards(provider),
@@ -26,7 +31,7 @@ class IPAnalysisScreen extends StatelessWidget {
                     _buildMapAndInfo(provider),
                     const SizedBox(height: 24),
                     _buildActivityChart(provider),
-                  ] else
+                  ] else if (provider.errorMessage == null)
                     _buildEmptyState(),
                 ],
               ),
@@ -36,6 +41,31 @@ class IPAnalysisScreen extends StatelessWidget {
       },
     );
   }
+
+  // ── Error Banner ───────────────────────────────────────────────────────────
+
+  Widget _buildErrorBanner(String message) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.error.withOpacity(0.1),
+        border: Border.all(color: AppTheme.error.withOpacity(0.3)),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          const Icon(LucideIcons.circleX, color: AppTheme.error, size: 18),
+          const SizedBox(width: 8),
+          Text(
+            message,
+            style: const TextStyle(color: AppTheme.error, fontSize: 14),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Search Bar ─────────────────────────────────────────────────────────────
 
   Widget _buildSearchBar(IPAnalysisProvider provider) {
     return Container(
@@ -59,6 +89,7 @@ class IPAnalysisScreen extends StatelessWidget {
                 ),
               ),
               onChanged: provider.setSearchQuery,
+              // Allow submitting by pressing Enter
               onSubmitted: (_) => provider.analyzeIP(),
             ),
           ),
@@ -76,20 +107,42 @@ class IPAnalysisScreen extends StatelessWidget {
     );
   }
 
+  // ── Info Cards ─────────────────────────────────────────────────────────────
+
   Widget _buildInfoCards(IPAnalysisProvider provider) {
     final ip = provider.ipInfo!;
     return Row(
       children: [
-        Expanded(child: _buildInfoCard('Location', ip.location, ip.country, LucideIcons.mapPin, AppTheme.info)),
+        Expanded(
+            child: _buildInfoCard(
+          'Location',
+          ip.location,
+          ip.country,
+          LucideIcons.mapPin,
+          AppTheme.info,
+        )),
         const SizedBox(width: 16),
-        Expanded(child: _buildInfoCard('ISP', ip.isp, 'Internet Service Provider', LucideIcons.globe, Colors.purple)),
+        Expanded(
+            child: _buildInfoCard(
+          'ISP',
+          ip.isp,
+          'Internet Service Provider',
+          LucideIcons.globe,
+          Colors.purple,
+        )),
         const SizedBox(width: 16),
         Expanded(child: _buildReputationCard(ip.reputation)),
       ],
     );
   }
 
-  Widget _buildInfoCard(String title, String value, String subtitle, IconData icon, Color color) {
+  Widget _buildInfoCard(
+    String title,
+    String value,
+    String subtitle,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -111,19 +164,30 @@ class IPAnalysisScreen extends StatelessWidget {
                 child: Icon(icon, color: color, size: 24),
               ),
               const SizedBox(width: 12),
-              Text(title, style: const TextStyle(color: AppTheme.textSecondary)),
+              Text(title,
+                  style: const TextStyle(color: AppTheme.textSecondary)),
             ],
           ),
           const SizedBox(height: 16),
-          Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-          Text(subtitle, style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
+          Text(
+            value,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          Text(
+            subtitle,
+            style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+          ),
         ],
       ),
     );
   }
 
   Widget _buildReputationCard(int reputation) {
-    final color = reputation >= 70 ? AppTheme.success : reputation >= 40 ? AppTheme.warning : AppTheme.error;
+    final color = reputation >= 70
+        ? AppTheme.success
+        : reputation >= 40
+            ? AppTheme.warning
+            : AppTheme.error;
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -145,11 +209,15 @@ class IPAnalysisScreen extends StatelessWidget {
                 child: Icon(LucideIcons.shield, color: color, size: 24),
               ),
               const SizedBox(width: 12),
-              const Text('Reputation Score', style: TextStyle(color: AppTheme.textSecondary)),
+              const Text('Reputation Score',
+                  style: TextStyle(color: AppTheme.textSecondary)),
             ],
           ),
           const SizedBox(height: 16),
-          Text('$reputation/100', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          Text(
+            '$reputation/100',
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 8),
           Container(
             height: 8,
@@ -161,7 +229,10 @@ class IPAnalysisScreen extends StatelessWidget {
               alignment: Alignment.centerLeft,
               widthFactor: reputation / 100,
               child: Container(
-                decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(4)),
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(4),
+                ),
               ),
             ),
           ),
@@ -169,6 +240,8 @@ class IPAnalysisScreen extends StatelessWidget {
       ),
     );
   }
+
+  // ── Map + IP Info ──────────────────────────────────────────────────────────
 
   Widget _buildMapAndInfo(IPAnalysisProvider provider) {
     final ip = provider.ipInfo!;
@@ -193,7 +266,10 @@ class IPAnalysisScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Geographic Location', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+          const Text(
+            'Geographic Location',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+          ),
           const SizedBox(height: 16),
           AspectRatio(
             aspectRatio: 16 / 9,
@@ -206,10 +282,16 @@ class IPAnalysisScreen extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(LucideIcons.mapPin, color: AppTheme.primary, size: 64),
+                    const Icon(LucideIcons.mapPin,
+                        color: AppTheme.primary, size: 64),
                     const SizedBox(height: 12),
-                    const Text('Map View', style: TextStyle(color: AppTheme.textSecondary)),
-                    Text(location, style: const TextStyle(fontSize: 12, color: AppTheme.textTertiary)),
+                    const Text('Map View',
+                        style: TextStyle(color: AppTheme.textSecondary)),
+                    Text(
+                      location,
+                      style: const TextStyle(
+                          fontSize: 12, color: AppTheme.textTertiary),
+                    ),
                   ],
                 ),
               ),
@@ -231,7 +313,10 @@ class IPAnalysisScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('IP Information', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+          const Text(
+            'IP Information',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+          ),
           const SizedBox(height: 16),
           _buildInfoRow('IP Address', ip.ip),
           _buildInfoRow('Country Code', ip.country),
@@ -261,6 +346,8 @@ class IPAnalysisScreen extends StatelessWidget {
     );
   }
 
+  // ── Activity Chart ─────────────────────────────────────────────────────────
+
   Widget _buildActivityChart(IPAnalysisProvider provider) {
     return Container(
       padding: const EdgeInsets.all(24),
@@ -276,7 +363,10 @@ class IPAnalysisScreen extends StatelessWidget {
             children: const [
               Icon(LucideIcons.activity, color: AppTheme.primary, size: 20),
               SizedBox(width: 8),
-              Text('Activity History', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+              Text(
+                'Activity History',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              ),
             ],
           ),
           const SizedBox(height: 24),
@@ -286,8 +376,10 @@ class IPAnalysisScreen extends StatelessWidget {
               LineChartData(
                 gridData: FlGridData(show: true, drawVerticalLine: false),
                 titlesData: FlTitlesData(
-                  rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles:
+                      AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  topTitles:
+                      AxisTitles(sideTitles: SideTitles(showTitles: false)),
                 ),
                 borderData: FlBorderData(show: false),
                 lineBarsData: [
@@ -295,7 +387,10 @@ class IPAnalysisScreen extends StatelessWidget {
                     spots: provider.activityData
                         .asMap()
                         .entries
-                        .map((e) => FlSpot(e.key.toDouble(), e.value.requests.toDouble()))
+                        .map((e) => FlSpot(
+                              e.key.toDouble(),
+                              e.value.requests.toDouble(),
+                            ))
                         .toList(),
                     isCurved: true,
                     color: AppTheme.primary,
@@ -311,6 +406,8 @@ class IPAnalysisScreen extends StatelessWidget {
     );
   }
 
+  // ── Empty State ────────────────────────────────────────────────────────────
+
   Widget _buildEmptyState() {
     return Container(
       padding: const EdgeInsets.all(64),
@@ -323,10 +420,15 @@ class IPAnalysisScreen extends StatelessWidget {
         children: const [
           Icon(LucideIcons.search, size: 64, color: AppTheme.textTertiary),
           SizedBox(height: 16),
-          Text('No IP Analyzed Yet', style: TextStyle(fontSize: 18, color: AppTheme.textSecondary)),
+          Text(
+            'No IP Analyzed Yet',
+            style: TextStyle(fontSize: 18, color: AppTheme.textSecondary),
+          ),
           SizedBox(height: 8),
-          Text('Enter an IP address above to view detailed analysis',
-              style: TextStyle(fontSize: 14, color: AppTheme.textTertiary)),
+          Text(
+            'Enter an IP address above to view detailed analysis',
+            style: TextStyle(fontSize: 14, color: AppTheme.textTertiary),
+          ),
         ],
       ),
     );

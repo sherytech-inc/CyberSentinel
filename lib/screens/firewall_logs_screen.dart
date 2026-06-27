@@ -15,7 +15,7 @@ class FirewallLogsScreen extends StatelessWidget {
         return SingleChildScrollView(
           child: Column(
             children: [
-              _buildTopBar(provider),
+              _buildTopBar(context, provider),
               const SizedBox(height: AppTheme.spacing16),
               _buildMainContent(context, provider),
             ],
@@ -25,7 +25,9 @@ class FirewallLogsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTopBar(FirewallLogsProvider provider) {
+  // ── Top Bar ────────────────────────────────────────────────────────────────
+
+  Widget _buildTopBar(BuildContext context, FirewallLogsProvider provider) {
     return Container(
       padding: const EdgeInsets.all(AppTheme.spacing24),
       decoration: BoxDecoration(
@@ -39,7 +41,7 @@ class FirewallLogsScreen extends StatelessWidget {
           Row(
             children: [
               ElevatedButton.icon(
-                onPressed: () {},
+                onPressed: () => _handleUploadLogs(context),
                 icon: const Icon(LucideIcons.upload, size: 16),
                 label: const Text('Upload Logs'),
                 style: ElevatedButton.styleFrom(
@@ -48,7 +50,7 @@ class FirewallLogsScreen extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               OutlinedButton.icon(
-                onPressed: () {},
+                onPressed: () => _handleExport(context, provider),
                 icon: const Icon(LucideIcons.download, size: 16),
                 label: const Text('Export'),
                 style: OutlinedButton.styleFrom(
@@ -70,6 +72,76 @@ class FirewallLogsScreen extends StatelessWidget {
       ),
     );
   }
+
+  // ── Handlers ───────────────────────────────────────────────────────────────
+
+  /// Shows a snackbar indicating upload is not yet connected to a backend.
+  /// When the backend is ready, replace this with a file picker + API call.
+  void _handleUploadLogs(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Row(
+          children: [
+            Icon(LucideIcons.info, color: Colors.white, size: 18),
+            SizedBox(width: 8),
+            Text(
+                'File upload will be available once the backend is connected.'),
+          ],
+        ),
+        backgroundColor: AppTheme.info,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        ),
+      ),
+    );
+  }
+
+  /// Shows a snackbar with export status.
+  /// When the backend is ready, replace this with a real PDF/CSV export call.
+  void _handleExport(BuildContext context, FirewallLogsProvider provider) {
+    if (provider.logs.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(LucideIcons.triangleAlert, color: Colors.white, size: 18),
+              SizedBox(width: 8),
+              Text('No logs available to export.'),
+            ],
+          ),
+          backgroundColor: AppTheme.warning,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+          ),
+        ),
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(LucideIcons.download, color: Colors.white, size: 18),
+            const SizedBox(width: 8),
+            Text('Exporting ${provider.logs.length} log entries...'),
+          ],
+        ),
+        backgroundColor: AppTheme.success,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        ),
+      ),
+    );
+  }
+
+  // ── Main Content ───────────────────────────────────────────────────────────
 
   Widget _buildMainContent(
       BuildContext context, FirewallLogsProvider provider) {
@@ -98,11 +170,14 @@ class FirewallLogsScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Firewall Activity',
-                    style:
-                        TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-                Text('${provider.logs.length} events in the last hour',
-                    style: const TextStyle(color: AppTheme.textSecondary)),
+                const Text(
+                  'Firewall Activity',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                ),
+                Text(
+                  '${provider.logs.length} events in the last hour',
+                  style: const TextStyle(color: AppTheme.textSecondary),
+                ),
               ],
             ),
           ),
@@ -120,8 +195,10 @@ class FirewallLogsScreen extends StatelessWidget {
               ],
               rows: provider.logs.map((log) {
                 return DataRow(cells: [
-                  DataCell(Text(log.ip,
-                      style: const TextStyle(fontFamily: 'monospace'))),
+                  DataCell(Text(
+                    log.ip,
+                    style: const TextStyle(fontFamily: 'monospace'),
+                  )),
                   DataCell(Text(log.port.toString())),
                   DataCell(Container(
                     padding:
@@ -147,10 +224,14 @@ class FirewallLogsScreen extends StatelessWidget {
                       ),
                     ),
                   )),
-                  DataCell(Text(log.rule,
-                      style: const TextStyle(fontFamily: 'monospace'))),
-                  DataCell(Text(log.timestamp,
-                      style: const TextStyle(fontFamily: 'monospace'))),
+                  DataCell(Text(
+                    log.rule,
+                    style: const TextStyle(fontFamily: 'monospace'),
+                  )),
+                  DataCell(Text(
+                    log.timestamp,
+                    style: const TextStyle(fontFamily: 'monospace'),
+                  )),
                 ]);
               }).toList(),
             ),
@@ -175,22 +256,35 @@ class FirewallLogsScreen extends StatelessWidget {
             children: const [
               Icon(LucideIcons.chartBar, color: AppTheme.primary, size: 20),
               SizedBox(width: 8),
-              Text('Insights',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+              Text(
+                'Insights',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              ),
             ],
           ),
           const SizedBox(height: 24),
-          _buildStatBar('Blocked', provider.blockedCount, provider.logs.length,
-              AppTheme.error),
+          _buildStatBar(
+            'Blocked',
+            provider.blockedCount,
+            provider.logs.length,
+            AppTheme.error,
+          ),
           const SizedBox(height: 12),
-          _buildStatBar('Allowed', provider.allowedCount, provider.logs.length,
-              AppTheme.success),
+          _buildStatBar(
+            'Allowed',
+            provider.allowedCount,
+            provider.logs.length,
+            AppTheme.success,
+          ),
         ],
       ),
     );
   }
 
   Widget _buildStatBar(String label, int value, int total, Color color) {
+    // Guard against division by zero if logs list is empty
+    final double fraction = total > 0 ? value / total : 0.0;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -198,7 +292,10 @@ class FirewallLogsScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(label, style: TextStyle(color: color)),
-            Text('$value', style: const TextStyle(fontWeight: FontWeight.w600)),
+            Text(
+              '$value',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
           ],
         ),
         const SizedBox(height: 4),
@@ -210,7 +307,7 @@ class FirewallLogsScreen extends StatelessWidget {
           ),
           child: FractionallySizedBox(
             alignment: Alignment.centerLeft,
-            widthFactor: value / total,
+            widthFactor: fraction,
             child: Container(
               decoration: BoxDecoration(
                 color: color,

@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../core/theme/app_theme.dart';
-import '../providers/dashboard_provider.dart';
 import '../widgets/dashboard/threat_score_card.dart';
 import '../widgets/dashboard/kpi_card.dart';
 import '../widgets/dashboard/traffic_chart.dart';

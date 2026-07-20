@@ -17,12 +17,20 @@ import 'providers/chatbot_provider.dart';
 import 'providers/metrics_provider.dart';
 import 'providers/integrations_provider.dart';
 import 'core/app_environment.dart';
+import 'core/sidecar/sidecar_manager.dart';
+import 'core/api/clients/local_agent_client.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   try {
     AppEnvironment.validate();
+    
+    final sidecarManager = SidecarManager();
+    await sidecarManager.start();
+    if (sidecarManager.port != null) {
+      LocalAgentClient.setBaseUrl('http://127.0.0.1:${sidecarManager.port}');
+    }
     
     await Supabase.initialize(
       url: AppEnvironment.supabaseUrl,

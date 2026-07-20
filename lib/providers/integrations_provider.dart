@@ -1,3 +1,4 @@
+import 'package:cybersentinel/core/api/clients/cloud_control_plane_client.dart';
 import 'session_cleanup_coordinator.dart';
 import 'package:flutter/foundation.dart';
 import '../models/integration_status.dart';
@@ -28,7 +29,7 @@ class IntegrationsProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await ApiService.getIntegrations();
+      final response = await CloudControlPlaneClient.getIntegrations();
       _integrations = IntegrationsResponse.fromJson(response);
     } catch (e) {
       _error = 'Failed to load integrations: $e';
@@ -45,7 +46,7 @@ class IntegrationsProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await ApiService.testIntegration(provider);
+      final response = await CloudControlPlaneClient.testIntegration(provider);
       final result = IntegrationTestResponse.fromJson(response);
       _testResults[provider] = result;
       

@@ -1,3 +1,4 @@
+import 'package:cybersentinel/core/api/clients/local_agent_client.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'session_cleanup_coordinator.dart';
@@ -240,7 +241,7 @@ class DashboardProvider extends ChangeNotifier {
       _isLoading = _alerts.isEmpty;
       _error = null;
 
-      final stats = await ApiService.getDashboardStats();
+      final stats = await LocalAgentClient.getDashboardStats();
 
       if (stats.containsKey('error') && stats['error'] == true) {
         _error = stats['message'] as String? ?? 'Failed to load dashboard data';
@@ -283,7 +284,7 @@ class DashboardProvider extends ChangeNotifier {
 
   Future<void> _fetchRecentAlerts() async {
     try {
-      final result = await ApiService.getThreats(page: 1, pageSize: 5);
+      final result = await LocalAgentClient.getThreats(page: 1, pageSize: 5);
       if (result.containsKey('error') && result['error'] == true) return;
 
       final items = result['items'] as List<dynamic>? ?? [];

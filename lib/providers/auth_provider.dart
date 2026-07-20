@@ -1,3 +1,4 @@
+import 'package:cybersentinel/core/api/clients/local_agent_client.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -22,7 +23,7 @@ class AuthProvider extends ChangeNotifier {
   bool get isAuthenticated => _user != null;
 
   AuthProvider() {
-    ApiService.onForceLogout = signOut;
+    LocalAgentClient.onForceLogout = signOut;
     _initAuthListener();
   }
 

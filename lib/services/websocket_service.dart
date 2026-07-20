@@ -1,8 +1,10 @@
+import 'package:cybersentinel/core/api/clients/local_agent_client.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:cybersentinel/core/sidecar/sidecar_manager.dart';
 import 'api_service.dart';
 
 enum WebSocketState {
@@ -61,7 +63,7 @@ class WebSocketService {
     if (_channel != null) return;
     _setState(WebSocketState.connecting);
 
-    final rawUrl = ApiService.baseUrl;
+    final rawUrl = LocalAgentClient.baseUrl;
     String wsUrl;
     if (rawUrl.startsWith('https://')) {
       wsUrl = 'wss://${rawUrl.substring(8)}/ws/events';
@@ -106,10 +108,17 @@ class WebSocketService {
         return;
       }
 
-      channel.sink.add(jsonEncode({
+      final payload = <String, dynamic>{
         'type': 'auth',
         'token': accessToken,
-      }));
+      };
+      
+      final localToken = SidecarManager().localToken;
+      if (localToken != null) {
+        payload['local_token'] = localToken;
+      }
+
+      channel.sink.add(jsonEncode(payload));
 
       _subscription = channel.stream.listen(
         (data) {

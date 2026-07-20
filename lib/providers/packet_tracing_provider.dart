@@ -1,3 +1,4 @@
+import 'package:cybersentinel/core/api/clients/local_agent_client.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'session_cleanup_coordinator.dart';
@@ -128,7 +129,7 @@ class PacketTracingProvider extends ChangeNotifier {
     final requestId = ++_latestStatusRequest;
 
     try {
-      final status = await ApiService.getCaptureStatus();
+      final status = await LocalAgentClient.getCaptureStatus();
       if (requestId != _latestStatusRequest || _disposed || _captureActionPending) return;
       applyCaptureStatus(status);
       if (_captureState == CaptureState.running) {
@@ -237,7 +238,7 @@ class PacketTracingProvider extends ChangeNotifier {
       _isLoading = _allPackets.isEmpty;
       _error = null;
 
-      final result = await ApiService.getPackets(pageSize: maxVisiblePackets);
+      final result = await LocalAgentClient.getPackets(pageSize: maxVisiblePackets);
 
       if (result.containsKey('error') && result['error'] == true) {
         _error = result['message'] as String? ?? 'Failed to load packets';
@@ -286,11 +287,11 @@ class PacketTracingProvider extends ChangeNotifier {
       if (_captureState == CaptureState.running) {
         _captureState = CaptureState.stopping;
         notifyListeners();
-        await ApiService.stopCapture();
+        await LocalAgentClient.stopCapture();
       } else {
         _captureState = CaptureState.starting;
         notifyListeners();
-        await ApiService.startCapture();
+        await LocalAgentClient.startCapture();
       }
 
       await _verifyCaptureTransition(
@@ -324,7 +325,7 @@ class PacketTracingProvider extends ChangeNotifier {
       if (actionGeneration != _captureActionGeneration || _disposed) return;
 
       final requestId = ++_latestStatusRequest;
-      final status = await ApiService.getCaptureStatus();
+      final status = await LocalAgentClient.getCaptureStatus();
 
       if (actionGeneration != _captureActionGeneration || _disposed || requestId != _latestStatusRequest) return;
 
@@ -355,7 +356,7 @@ class PacketTracingProvider extends ChangeNotifier {
     // After failure, perform one final authoritative refresh.
     try {
       final requestId = ++_latestStatusRequest;
-      final finalStatus = await ApiService.getCaptureStatus();
+      final finalStatus = await LocalAgentClient.getCaptureStatus();
       if (requestId == _latestStatusRequest && !_disposed) {
         applyCaptureStatus(finalStatus);
       }

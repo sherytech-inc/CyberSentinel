@@ -1,3 +1,4 @@
+import 'package:cybersentinel/core/api/clients/local_agent_client.dart';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
@@ -150,7 +151,7 @@ class _FirewallLogsScreenState extends State<FirewallLogsScreen> {
           );
         }
 
-        final uploadResult = await ApiService.uploadFirewallLogs(name, bytes);
+        final uploadResult = await LocalAgentClient.uploadFirewallLogs(name, bytes);
 
         if (context.mounted) {
           Navigator.pop(context); // close dialog

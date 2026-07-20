@@ -1,3 +1,4 @@
+import 'package:cybersentinel/core/api/clients/cloud_control_plane_client.dart';
 import 'package:flutter/material.dart';
 import 'session_cleanup_coordinator.dart';
 import 'package:uuid/uuid.dart';
@@ -40,7 +41,7 @@ class ChatbotProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await ApiService.sendChatMessage(_sessionId, text);
+      final response = await CloudControlPlaneClient.sendChatMessage(_sessionId, text);
 
       if (response['error'] == true) {
         _addBotMessage("Sorry, an error occurred: ${response['message']}");

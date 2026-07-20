@@ -1,3 +1,4 @@
+import 'package:cybersentinel/core/api/clients/local_agent_client.dart';
 import 'package:flutter/material.dart';
 import 'session_cleanup_coordinator.dart';
 import '../services/api_service.dart';
@@ -32,7 +33,7 @@ class DemoProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await ApiService.getDemoStatus();
+      final response = await LocalAgentClient.getDemoStatus();
       if (response['error'] == true) {
         _error = response['message'];
       } else {
@@ -55,7 +56,7 @@ class DemoProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await ApiService.triggerDemoMode(scenario);
+      final response = await LocalAgentClient.triggerDemoMode(scenario);
       if (response['error'] == true) {
         throw Exception(response['message']);
       }
@@ -76,7 +77,7 @@ class DemoProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await ApiService.resetDemoMode(_activeRunId!);
+      final response = await LocalAgentClient.resetDemoMode(_activeRunId!);
       if (response['error'] == true) {
         throw Exception(response['message']);
       }

@@ -1,3 +1,5 @@
+import 'package:cybersentinel/core/api/clients/cloud_control_plane_client.dart';
+import 'package:cybersentinel/core/api/clients/local_agent_client.dart';
 import 'package:flutter/material.dart';
 import 'session_cleanup_coordinator.dart';
 import '../models/scan_result.dart';
@@ -33,7 +35,7 @@ class VirusScannerProvider extends ChangeNotifier {
       final String target = fileName ?? _url;
       final String type = fileName != null ? 'file' : 'url';
       
-      final result = await ApiService.scanVirus(target, type);
+      final result = await CloudControlPlaneClient.scanVirus(target, type);
       
       if (result.containsKey('status') || result.containsKey('scan_type')) {
         _scanResult = ScanResult.fromJson(result);
@@ -58,7 +60,7 @@ class VirusScannerProvider extends ChangeNotifier {
     notifyListeners();
     
     try {
-      final result = await ApiService.scanVirusFile(fileName, bytes);
+      final result = await LocalAgentClient.scanVirusFile(fileName, bytes);
       
       if (result.containsKey('status') || result.containsKey('scan_type')) {
         _scanResult = ScanResult.fromJson(result);

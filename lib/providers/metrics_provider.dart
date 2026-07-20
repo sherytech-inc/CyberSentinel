@@ -1,3 +1,4 @@
+import 'package:cybersentinel/core/api/clients/local_agent_client.dart';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -46,7 +47,7 @@ class MetricsProvider extends ChangeNotifier {
     }
 
     try {
-      final dashboardStats = await ApiService.getDashboardStats();
+      final dashboardStats = await LocalAgentClient.getDashboardStats();
 
       final nextMetrics = GlobalSecurityMetrics.fromApi(
         dashboardStats: dashboardStats,

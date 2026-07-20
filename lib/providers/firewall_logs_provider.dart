@@ -1,3 +1,4 @@
+import 'package:cybersentinel/core/api/clients/local_agent_client.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'session_cleanup_coordinator.dart';
@@ -66,7 +67,7 @@ class FirewallLogsProvider extends ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
-      final result = await ApiService.fetchFirewallLogs(
+      final result = await LocalAgentClient.fetchFirewallLogs(
         page: _currentPage,
         pageSize: _pageSize,
       );

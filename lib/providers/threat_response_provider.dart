@@ -1,3 +1,4 @@
+import 'package:cybersentinel/core/api/clients/local_agent_client.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'session_cleanup_coordinator.dart';
@@ -58,7 +59,7 @@ class ThreatResponseProvider extends ChangeNotifier {
 
   Future<void> fetchOverview() async {
     try {
-      final data = await ApiService.getResponseOverview();
+      final data = await LocalAgentClient.getResponseOverview();
       _activeThreats = data['active_threats'] ?? 0;
       _blockedIPsCount = data['blocked_ips'] ?? 0;
       _totalActions = data['total_actions'] ?? 0;
@@ -70,7 +71,7 @@ class ThreatResponseProvider extends ChangeNotifier {
 
   Future<void> fetchThreatQueue() async {
     try {
-      final data = await ApiService.getResponseThreats();
+      final data = await LocalAgentClient.getResponseThreats();
       final items = data['items'] as List<dynamic>?;
       if (items != null) {
         _threatQueue = items.cast<Map<String, dynamic>>();
@@ -85,7 +86,7 @@ class ThreatResponseProvider extends ChangeNotifier {
 
   Future<void> fetchActionHistory() async {
     try {
-      final data = await ApiService.getResponseHistory();
+      final data = await LocalAgentClient.getResponseHistory();
       final items = data['items'] as List<dynamic>?;
       if (items != null) {
         _actionHistory = items.map((e) => ResponseAction.fromJson(e as Map<String, dynamic>)).toList();
@@ -103,7 +104,7 @@ class ThreatResponseProvider extends ChangeNotifier {
     _pendingActions.add(alertId);
     notifyListeners();
     try {
-      final res = await ApiService.responseBlockIP(ip, reason: reason);
+      final res = await LocalAgentClient.responseBlockIP(ip, reason: reason);
       if (res['error'] == true) {
         return {'success': false, 'message': res['message']};
       }
@@ -125,7 +126,7 @@ class ThreatResponseProvider extends ChangeNotifier {
     _pendingActions.add(alertId);
     notifyListeners();
     try {
-      final res = await ApiService.responseUnblockIP(ip, reason: reason);
+      final res = await LocalAgentClient.responseUnblockIP(ip, reason: reason);
       if (res['error'] == true) return {'success': false, 'message': res['message']};
       return {'success': true, 'message': res['message'] ?? 'Action recorded', 'status': res['status']};
     } catch (e) {
@@ -141,7 +142,7 @@ class ThreatResponseProvider extends ChangeNotifier {
     _pendingActions.add(alertId);
     notifyListeners();
     try {
-      final res = await ApiService.investigateThreat(alertId);
+      final res = await LocalAgentClient.investigateThreat(alertId);
       if (res['error'] == true) return {'success': false, 'message': res['message']};
       return {'success': true, 'message': 'Investigation started'};
     } catch (e) {
@@ -157,7 +158,7 @@ class ThreatResponseProvider extends ChangeNotifier {
     _pendingActions.add(alertId);
     notifyListeners();
     try {
-      final res = await ApiService.resolveThreat(alertId);
+      final res = await LocalAgentClient.resolveThreat(alertId);
       if (res['error'] == true) return {'success': false, 'message': res['message']};
       return {'success': true, 'message': 'Alert resolved successfully'};
     } catch (e) {
@@ -173,7 +174,7 @@ class ThreatResponseProvider extends ChangeNotifier {
     _pendingActions.add(alertId);
     notifyListeners();
     try {
-      final res = await ApiService.ignoreThreat(alertId);
+      final res = await LocalAgentClient.ignoreThreat(alertId);
       if (res['error'] == true) return {'success': false, 'message': res['message']};
       return {'success': true, 'message': 'Alert ignored'};
     } catch (e) {
@@ -186,7 +187,7 @@ class ThreatResponseProvider extends ChangeNotifier {
 
   Future<Map<String, dynamic>?> fetchThreatExplanation(String alertId) async {
     try {
-      return await ApiService.getThreatExplanation(alertId);
+      return await LocalAgentClient.getThreatExplanation(alertId);
     } catch (e) {
       debugPrint('Error fetching threat explanation: $e');
       return null;
@@ -195,7 +196,7 @@ class ThreatResponseProvider extends ChangeNotifier {
 
   Future<List<dynamic>> fetchThreatNotes(String alertId) async {
     try {
-      return await ApiService.getThreatNotes(alertId);
+      return await LocalAgentClient.getThreatNotes(alertId);
     } catch (e) {
       debugPrint('Error fetching threat notes: $e');
       return [];
@@ -204,7 +205,7 @@ class ThreatResponseProvider extends ChangeNotifier {
 
   Future<void> addThreatNote(String alertId, String note) async {
     try {
-      await ApiService.addThreatNote(alertId, note);
+      await LocalAgentClient.addThreatNote(alertId, note);
     } catch (e) {
       debugPrint('Error adding threat note: $e');
       throw Exception('Failed to add note');

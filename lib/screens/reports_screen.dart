@@ -1,3 +1,4 @@
+import 'package:cybersentinel/core/api/clients/local_agent_client.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -30,7 +31,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   void _downloadFile(String type, String timeRange) async {
-    final url = ApiService.getReportingDownloadUrl(type, timeRange);
+    final url = LocalAgentClient.getReportingDownloadUrl(type, timeRange);
     final uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);

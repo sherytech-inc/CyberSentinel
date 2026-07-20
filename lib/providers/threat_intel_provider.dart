@@ -1,3 +1,4 @@
+import 'package:cybersentinel/core/api/clients/cloud_control_plane_client.dart';
 import 'package:flutter/material.dart';
 import 'session_cleanup_coordinator.dart';
 import '../models/intel_model.dart';
@@ -66,7 +67,7 @@ class ThreatIntelProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final result = await ApiService.analyzeIP(query);
+      final result = await CloudControlPlaneClient.analyzeIP(query);
 
       // Stale response protection
       if (currentGen != _lookupGeneration) return;

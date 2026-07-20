@@ -222,9 +222,9 @@ class _PacketTracingScreenState extends State<PacketTracingScreen> {
     if (isMobile) {
       return Column(
         children: [
-          Expanded(child: _buildPacketList(provider)),
+          Expanded(flex: 3, child: _buildPacketList(provider)),
           const SizedBox(height: AppTheme.spacing16),
-          _buildDetailPanel(provider),
+          Expanded(flex: 2, child: _buildDetailPanel(provider)),
         ],
       );
     }
@@ -497,90 +497,92 @@ class _PacketTracingScreenState extends State<PacketTracingScreen> {
         border: Border.all(color: AppTheme.borderPrimary),
         borderRadius: BorderRadius.circular(AppTheme.radiusLg),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Packet Details',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-              if (provider.selectedPacket != null)
-                IconButton(
-                  icon: const Icon(LucideIcons.x, size: 20, color: AppTheme.textSecondary),
-                  onPressed: provider.clearSelection,
-                  tooltip: 'Clear selection',
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-            ],
-          ),
-          const SizedBox(height: AppTheme.spacing24),
-          if (provider.selectedPacket != null) ...[
-            _buildDetailItem('Source IP', provider.selectedPacket!.ip),
-            _buildDetailItem('Port', provider.selectedPacket!.port.toString()),
-            _buildDetailItem('Protocol', provider.selectedPacket!.protocol),
-            _buildDetailItem('Packet Size', provider.selectedPacket!.size),
-            _buildDetailItem(
-              'ML Classification',
-              provider.selectedPacket!.mlClassification,
-              textColor: _getClassificationColor(provider.selectedPacket!.mlClassification),
-            ),
-            _buildDetailItem(
-              'Decision Severity',
-              provider.selectedPacket!.decisionSeverity,
-              textColor: _getSeverityColor(provider.selectedPacket!.decisionSeverity),
-            ),
-            _buildDetailItem(
-              'Final Risk Score',
-              provider.selectedPacket!.finalRiskScore,
-              textColor: AppTheme.textPrimary,
-            ),
-            _buildDetailItem('Timestamp', provider.selectedPacket!.timestamp),
-            const Divider(color: AppTheme.borderPrimary, height: 32),
-            const Text(
-              'Raw Packet Data',
-              style: TextStyle(
-                fontSize: 12,
-                color: AppTheme.textTertiary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppTheme.borderPrimary,
-                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-              ),
-              child: const Text(
-                '45 00 00 3c 1c 46 40 00 40 06 b1 e6 ac 10 0a 63...',
-                style: TextStyle(
-                  fontFamily: 'monospace',
-                  fontSize: 12,
-                  color: AppTheme.textSecondary,
-                ),
-              ),
-            ),
-          ] else
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(64.0),
-                child: Text(
-                  'Select a packet to view details',
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Packet Details',
                   style: TextStyle(
-                    fontSize: 14,
-                    color: AppTheme.textTertiary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+                if (provider.selectedPacket != null)
+                  IconButton(
+                    icon: const Icon(LucideIcons.x, size: 20, color: AppTheme.textSecondary),
+                    onPressed: provider.clearSelection,
+                    tooltip: 'Clear selection',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+              ],
+            ),
+            const SizedBox(height: AppTheme.spacing24),
+            if (provider.selectedPacket != null) ...[
+              _buildDetailItem('Source IP', provider.selectedPacket!.ip),
+              _buildDetailItem('Port', provider.selectedPacket!.port.toString()),
+              _buildDetailItem('Protocol', provider.selectedPacket!.protocol),
+              _buildDetailItem('Packet Size', provider.selectedPacket!.size),
+              _buildDetailItem(
+                'ML Classification',
+                provider.selectedPacket!.mlClassification,
+                textColor: _getClassificationColor(provider.selectedPacket!.mlClassification),
+              ),
+              _buildDetailItem(
+                'Decision Severity',
+                provider.selectedPacket!.decisionSeverity,
+                textColor: _getSeverityColor(provider.selectedPacket!.decisionSeverity),
+              ),
+              _buildDetailItem(
+                'Final Risk Score',
+                provider.selectedPacket!.finalRiskScore,
+                textColor: AppTheme.textPrimary,
+              ),
+              _buildDetailItem('Timestamp', provider.selectedPacket!.timestamp),
+              const Divider(color: AppTheme.borderPrimary, height: 32),
+              const Text(
+                'Raw Packet Data',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppTheme.textTertiary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.borderPrimary,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                ),
+                child: const Text(
+                  '45 00 00 3c 1c 46 40 00 40 06 b1 e6 ac 10 0a 63...',
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 12,
+                    color: AppTheme.textSecondary,
                   ),
                 ),
               ),
-            ),
-        ],
+            ] else
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(64.0),
+                  child: Text(
+                    'Select a packet to view details',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppTheme.textTertiary,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

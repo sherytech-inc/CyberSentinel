@@ -366,7 +366,13 @@ class ApiService {
     final active = _refreshFuture;
     if (active != null) return active;
 
-    final operation = Supabase.instance.client.auth.refreshSession().then((res) => res.session).catchError((_) => null);
+    Future<Session?> operation;
+    try {
+      operation = Supabase.instance.client.auth.refreshSession().then((res) => res.session).catchError((_) => null);
+    } catch (_) {
+      operation = Future.value(null);
+    }
+    
     _refreshFuture = operation;
 
     return operation.whenComplete(() {
@@ -376,20 +382,28 @@ class ApiService {
     });
   }
 
+  static Future<Map<String, String>> _getHeaders() async {
+    final headers = {'Content-Type': 'application/json'};
+    String? token;
+    try {
+      final session = Supabase.instance.client.auth.currentSession;
+      token = session?.accessToken;
+    } catch (_) {
+      // Supabase not initialized, ignore
+    }
+    
+    if (token != null) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+    return headers;
+  }
+
   static Future<http.Response> _sendAuthenticated(
     Future<http.Response> Function(Map<String, String> headers) request, {
     required bool allowRefreshRetry,
   }) async {
-    final session = Supabase.instance.client.auth.currentSession;
-    if (session == null || session.accessToken.isEmpty) {
-      throw Exception('Authentication required.');
-    }
-
-    final headers = {
-      'Content-Type': 'application/json',
-      'X-Request-ID': _uuid.v4(),
-      'Authorization': 'Bearer ${session.accessToken}'
-    };
+    final headers = await _getHeaders();
+    headers['X-Request-ID'] = _uuid.v4();
 
     final response = await request(headers);
 

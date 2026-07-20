@@ -431,6 +431,13 @@ class PacketTracingProvider extends ChangeNotifier {
     super.dispose();
   }
 
+  @override
+  void notifyListeners() {
+    if (!_disposed) {
+      super.notifyListeners();
+    }
+  }
+
   void clear() {
     _captureState = CaptureState.stopped;
     _selectedPacketId = null;

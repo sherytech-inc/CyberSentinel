@@ -4,36 +4,47 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../core/theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
+import '../../core/app_environment.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class CreateAccountScreen extends StatefulWidget {
+  const CreateAccountScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<CreateAccountScreen> createState() => _CreateAccountScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _CreateAccountScreenState extends State<CreateAccountScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _nameController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _nameController.dispose();
     super.dispose();
   }
 
-  Future<void> _handleEmailSignIn() async {
+  Future<void> _handleEmailSignUp() async {
     if (!_formKey.currentState!.validate()) return;
     
     final auth = context.read<AuthProvider>();
     auth.clearError();
-    final success = await auth.signInWithEmail(
+    final success = await auth.signUp(
       _emailController.text.trim(),
       _passwordController.text,
+      displayName: _nameController.text.trim().isNotEmpty ? _nameController.text.trim() : null,
     );
-    // GoRouter redirect listener on auth changes will handle navigation if success
+    if (success) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Account created successfully! Please sign in.')),
+        );
+        context.pop();
+      }
+    }
   }
 
   Future<void> _handleGoogleSignIn() async {
@@ -86,7 +97,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: AppTheme.spacing24),
                   const Text(
-                    'CyberSentinel',
+                    'Create Account',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 30,
@@ -96,17 +107,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: AppTheme.spacing8),
                   const Text(
-                    'Intelligent Threat Detection & Response',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: AppTheme.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: AppTheme.spacing8),
-                  const Text(
-                    'Sign in to access your security operations workspace.',
+                    'Join CyberSentinel as a security analyst.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 14,
@@ -130,6 +131,24 @@ class _LoginScreenState extends State<LoginScreen> {
                         textAlign: TextAlign.center,
                       ),
                     ),
+
+                  TextFormField(
+                    controller: _nameController,
+                    decoration: InputDecoration(
+                      labelText: 'Full Name (Optional)',
+                      prefixIcon: const Icon(LucideIcons.user, size: 18),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                        borderSide: const BorderSide(color: AppTheme.borderPrimary),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                        borderSide: const BorderSide(color: AppTheme.borderPrimary),
+                      ),
+                    ),
+                    keyboardType: TextInputType.name,
+                  ),
+                  const SizedBox(height: AppTheme.spacing16),
 
                   TextFormField(
                     controller: _emailController,
@@ -165,12 +184,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     obscureText: true,
-                    validator: (v) => (v == null || v.isEmpty) ? 'Password is required' : null,
+                    validator: (v) => (v == null || v.isEmpty || v.length < 6) ? 'Password must be at least 6 characters' : null,
                   ),
                   const SizedBox(height: AppTheme.spacing24),
 
                   ElevatedButton(
-                    onPressed: auth.isLoading ? null : _handleEmailSignIn,
+                    onPressed: auth.isLoading ? null : _handleEmailSignUp,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primary,
                       foregroundColor: Colors.white,
@@ -184,7 +203,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             width: 20, height: 20,
                             child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                           )
-                        : const Text('Sign In', style: TextStyle(fontWeight: FontWeight.bold)),
+                        : const Text('Create Account', style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
                   
                   if (AppEnvironment.enableGoogleAuth) ...[
@@ -217,25 +236,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
 
                   const SizedBox(height: AppTheme.spacing16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      TextButton(
-                        onPressed: () => context.push('/forgot-password'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppTheme.textSecondary,
-                        ),
-                        child: const Text('Forgot Password?'),
-                      ),
-                      const Text('|', style: TextStyle(color: AppTheme.borderPrimary)),
-                      TextButton(
-                        onPressed: () => context.push('/create-account'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppTheme.primary,
-                        ),
-                        child: const Text('Create Account'),
-                      ),
-                    ],
+                  TextButton(
+                    onPressed: () => context.pop(),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppTheme.textSecondary,
+                    ),
+                    child: const Text('Already have an account? Sign In'),
                   ),
                 ],
               ),

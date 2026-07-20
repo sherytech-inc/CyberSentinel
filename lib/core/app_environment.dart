@@ -16,6 +16,11 @@ class AppEnvironment {
     defaultValue: '',
   );
 
+  static const bool enableGoogleAuth = bool.fromEnvironment(
+    'ENABLE_GOOGLE_AUTH',
+    defaultValue: false,
+  );
+
   static void validate() {
     if (supabaseUrl.isEmpty ||
         supabasePublishableKey.isEmpty ||

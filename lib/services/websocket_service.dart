@@ -92,8 +92,15 @@ class WebSocketService {
       }
 
       // Read latest token for this specific connection
-      final session = Supabase.instance.client.auth.currentSession;
-      if (session == null || session.accessToken.isEmpty) {
+      String? accessToken;
+      try {
+        final session = Supabase.instance.client.auth.currentSession;
+        accessToken = session?.accessToken;
+      } catch (e) {
+        if (kDebugMode) print('Supabase not initialized or accessible (likely test environment)');
+      }
+
+      if (accessToken == null || accessToken.isEmpty) {
         if (kDebugMode) print('No session available for WebSocket auth');
         _handleDisconnect(url, unauthorized: true);
         return;
@@ -101,7 +108,7 @@ class WebSocketService {
 
       channel.sink.add(jsonEncode({
         'type': 'auth',
-        'token': session.accessToken,
+        'token': accessToken,
       }));
 
       _subscription = channel.stream.listen(
@@ -138,7 +145,7 @@ class WebSocketService {
       final payload = envelope['payload'] as Map<String, dynamic>? ?? {};
 
       if (eventType == 'auth_ack') {
-        final bool authenticated = envelope['authenticated'] == true;
+        final bool authenticated = envelope['authenticated'] == true || envelope['status'] == 'success';
         if (authenticated) {
           _setState(WebSocketState.connected);
           if (kDebugMode) print('WebSocket authenticated successfully');
@@ -214,14 +221,18 @@ class WebSocketService {
     _setState(WebSocketState.reconnecting);
     _reconnectTimer = Timer(Duration(seconds: delay), () async {
       // Re-read token, refresh if necessary (this triggers _refreshToken via ApiService or Supabase explicitly if expired)
-      final session = Supabase.instance.client.auth.currentSession;
-      if (session != null && session.isExpired) {
-        try {
-          await Supabase.instance.client.auth.refreshSession();
-        } catch (_) {
-          _setState(WebSocketState.unauthorized);
-          return;
+      try {
+        final session = Supabase.instance.client.auth.currentSession;
+        if (session != null && session.isExpired) {
+          try {
+            await Supabase.instance.client.auth.refreshSession();
+          } catch (_) {
+            _setState(WebSocketState.unauthorized);
+            return;
+          }
         }
+      } catch (e) {
+        // Ignore if uninitialized
       }
       _establishConnection(url);
     });

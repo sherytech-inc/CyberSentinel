@@ -13,6 +13,7 @@ import '../../screens/ai_analyst_screen.dart';
 import '../../screens/investigation_screen.dart';
 import '../../screens/auth/login_screen.dart';
 import '../../screens/auth/forgot_password_screen.dart';
+import '../../screens/auth/create_account_screen.dart';
 import '../../providers/auth_provider.dart';
 
 class AppRouter {
@@ -22,7 +23,7 @@ class AppRouter {
       refreshListenable: authProvider,
       redirect: (context, state) {
         final bool isAuth = authProvider.isAuthenticated;
-        final bool isLoggingIn = state.uri.path == '/login' || state.uri.path == '/forgot-password';
+        final bool isLoggingIn = state.uri.path == '/login' || state.uri.path == '/forgot-password' || state.uri.path == '/create-account';
 
         if (!isAuth && !isLoggingIn) {
           return '/login';
@@ -44,6 +45,11 @@ class AppRouter {
           path: '/forgot-password',
           name: 'forgot-password',
           builder: (context, state) => const ForgotPasswordScreen(),
+        ),
+        GoRoute(
+          path: '/create-account',
+          name: 'create-account',
+          builder: (context, state) => const CreateAccountScreen(),
         ),
         ShellRoute(
           builder: (context, state, child) => MainLayout(child: child),

@@ -441,9 +441,11 @@ class _FirewallLogsScreenState extends State<FirewallLogsScreen> {
             children: [
               const Icon(LucideIcons.chartBar, color: AppTheme.primary, size: 20),
               const SizedBox(width: 8),
-              Text(
-                _selectedTab == 0 ? 'OS Firewall Insights' : 'SOC Actions Insights',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              Expanded(
+                child: Text(
+                  _selectedTab == 0 ? 'OS Firewall Insights' : 'SOC Actions Insights',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                ),
               ),
             ],
           ),

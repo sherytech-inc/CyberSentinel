@@ -122,6 +122,29 @@ class AuthProvider extends ChangeNotifier {
     return false;
   }
 
+  Future<bool> signUp(String email, String password, {String? displayName}) async {
+    _setLoading(true);
+    try {
+      final AuthResponse res = await _supabase.auth.signUp(
+        email: email,
+        password: password,
+        data: displayName != null ? {'display_name': displayName} : null,
+      );
+      if (res.user != null) {
+        _error = null;
+        return true;
+      }
+    } catch (error) {
+      if (kDebugMode) {
+        debugPrint('Registration failed: $error');
+      }
+      _error = _mapAuthenticationError(error);
+    } finally {
+      _setLoading(false);
+    }
+    return false;
+  }
+
   Future<bool> signInWithGoogle() async {
     _setLoading(true);
     try {

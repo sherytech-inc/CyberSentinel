@@ -1,38 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:fl_chart/fl_chart.dart';
 import '../core/theme/app_theme.dart';
-import '../providers/ip_analysis_provider.dart';
+import '../providers/threat_intel_provider.dart';
+import '../models/intel_model.dart';
 
 class IPAnalysisScreen extends StatelessWidget {
   const IPAnalysisScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<IPAnalysisProvider>(
+    return Consumer<ThreatIntelProvider>(
       builder: (context, provider, _) {
         return SingleChildScrollView(
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1200),
+              constraints: const BoxConstraints(maxWidth: 800),
               child: Column(
                 children: [
-                  _buildSearchBar(provider),
-                  // Show validation error if present
+                  _buildSearchSection(context, provider),
                   if (provider.errorMessage != null) ...[
-                    const SizedBox(height: 12),
-                    _buildErrorBanner(provider.errorMessage!),
+                    const SizedBox(height: 24),
+                    _buildError(provider.errorMessage!),
+                  ] else if (provider.intelResponse != null) ...[
+                    const SizedBox(height: 24),
+                    _buildResults(provider.intelResponse!),
                   ],
-                  const SizedBox(height: 24),
-                  if (provider.ipInfo != null) ...[
-                    _buildInfoCards(provider),
-                    const SizedBox(height: 24),
-                    _buildMapAndInfo(provider),
-                    const SizedBox(height: 24),
-                    _buildActivityChart(provider),
-                  ] else if (provider.errorMessage == null)
-                    _buildEmptyState(),
                 ],
               ),
             ),
@@ -42,197 +35,63 @@ class IPAnalysisScreen extends StatelessWidget {
     );
   }
 
-  // ── Error Banner ───────────────────────────────────────────────────────────
+  // ── Search Section ─────────────────────────────────────────────────────────
 
-  Widget _buildErrorBanner(String message) {
+  Widget _buildSearchSection(BuildContext context, ThreatIntelProvider provider) {
     return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppTheme.error.withOpacity(0.1),
-        border: Border.all(color: AppTheme.error.withOpacity(0.3)),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          const Icon(LucideIcons.circleX, color: AppTheme.error, size: 18),
-          const SizedBox(width: 8),
-          Text(
-            message,
-            style: const TextStyle(color: AppTheme.error, fontSize: 14),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Search Bar ─────────────────────────────────────────────────────────────
-
-  Widget _buildSearchBar(IPAnalysisProvider provider) {
-    return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
         color: AppTheme.bgSecondary,
         border: Border.all(color: AppTheme.borderPrimary),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Enter IP address to analyze (e.g., 192.168.1.1)',
-                prefixIcon: const Icon(LucideIcons.search, size: 20),
-                filled: true,
-                fillColor: AppTheme.borderPrimary,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              onChanged: provider.setSearchQuery,
-              // Allow submitting by pressing Enter
-              onSubmitted: (_) => provider.analyzeIP(),
-            ),
-          ),
-          const SizedBox(width: 12),
-          ElevatedButton(
-            onPressed: provider.analyzeIP,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primary,
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
-            ),
-            child: const Text('Analyze'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Info Cards ─────────────────────────────────────────────────────────────
-
-  Widget _buildInfoCards(IPAnalysisProvider provider) {
-    final ip = provider.ipInfo!;
-    return Row(
-      children: [
-        Expanded(
-            child: _buildInfoCard(
-          'Location',
-          ip.location,
-          ip.country,
-          LucideIcons.mapPin,
-          AppTheme.info,
-        )),
-        const SizedBox(width: 16),
-        Expanded(
-            child: _buildInfoCard(
-          'ISP',
-          ip.isp,
-          'Internet Service Provider',
-          LucideIcons.globe,
-          Colors.purple,
-        )),
-        const SizedBox(width: 16),
-        Expanded(child: _buildReputationCard(ip.reputation)),
-      ],
-    );
-  }
-
-  Widget _buildInfoCard(
-    String title,
-    String value,
-    String subtitle,
-    IconData icon,
-    Color color,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: AppTheme.bgSecondary,
-        border: Border.all(color: AppTheme.borderPrimary),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(icon, color: color, size: 24),
-              ),
-              const SizedBox(width: 12),
-              Text(title,
-                  style: const TextStyle(color: AppTheme.textSecondary)),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          Text(
-            subtitle,
-            style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildReputationCard(int reputation) {
-    final color = reputation >= 70
-        ? AppTheme.success
-        : reputation >= 40
-            ? AppTheme.warning
-            : AppTheme.error;
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: AppTheme.bgSecondary,
-        border: Border.all(color: AppTheme.borderPrimary),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(LucideIcons.shield, color: color, size: 24),
-              ),
-              const SizedBox(width: 12),
-              const Text('Reputation Score',
-                  style: TextStyle(color: AppTheme.textSecondary)),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            '$reputation/100',
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          const Text(
+            'Threat Intelligence Lookup',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 8),
-          Container(
-            height: 8,
-            decoration: BoxDecoration(
-              color: AppTheme.borderPrimary,
-              borderRadius: BorderRadius.circular(4),
+          const Text(
+            'Lookup an IP address across VirusTotal, AbuseIPDB, and GeoIP',
+            style: TextStyle(color: AppTheme.textSecondary),
+          ),
+          const SizedBox(height: 32),
+
+          // ── IP Input ──
+          TextField(
+            decoration: InputDecoration(
+              hintText: 'Enter an IP address...',
+              prefixIcon: const Icon(LucideIcons.globe, size: 20),
+              filled: true,
+              fillColor: AppTheme.borderPrimary,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppTheme.borderSecondary),
+              ),
             ),
-            child: FractionallySizedBox(
-              alignment: Alignment.centerLeft,
-              widthFactor: reputation / 100,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(4),
-                ),
+            onChanged: provider.setSearchQuery,
+            onSubmitted: (_) => _handleSearch(context, provider),
+          ),
+
+          const SizedBox(height: 24),
+
+          // ── Search Button ──
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: provider.isLoading
+                  ? null
+                  : () => _handleSearch(context, provider),
+              icon: const Icon(LucideIcons.search, size: 24),
+              label: Text(
+                provider.isLoading ? 'Looking up...' : 'Lookup IP',
+                style: const TextStyle(fontSize: 18),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
               ),
             ),
           ),
@@ -241,193 +100,313 @@ class IPAnalysisScreen extends StatelessWidget {
     );
   }
 
-  // ── Map + IP Info ──────────────────────────────────────────────────────────
+  void _handleSearch(BuildContext context, ThreatIntelProvider provider) {
+    final hasIp = provider.searchQuery.trim().isNotEmpty;
 
-  Widget _buildMapAndInfo(IPAnalysisProvider provider) {
-    final ip = provider.ipInfo!;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    if (!hasIp) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(LucideIcons.triangleAlert, color: Colors.white, size: 18),
+              SizedBox(width: 8),
+              Text('Please enter an IP address before searching.'),
+            ],
+          ),
+          backgroundColor: AppTheme.warning,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+          ),
+        ),
+      );
+      return;
+    }
+
+    provider.analyzeIP();
+  }
+
+  // ── Results ────────────────────────────────────────────────────────────────
+
+  Widget _buildResults(IntelligenceResponse response) {
+    if (response.status == IntelStatus.notConfigured) {
+      return Container(
+        padding: const EdgeInsets.all(48),
+        decoration: BoxDecoration(
+          color: AppTheme.bgSecondary,
+          border: Border.all(color: AppTheme.borderPrimary),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          children: const [
+            Icon(LucideIcons.settings, size: 64, color: AppTheme.warning),
+            SizedBox(height: 24),
+            Text(
+              'Threat Intelligence Disabled',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textPrimary,
+              ),
+            ),
+            SizedBox(height: 16),
+            Text(
+              'The Threat Intelligence module requires active API keys for VirusTotal, AbuseIPDB, and GeoIP. It is currently disabled.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                color: AppTheme.textSecondary,
+                height: 1.5,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
       children: [
-        Expanded(child: _buildMapPlaceholder(ip.location)),
-        const SizedBox(width: 16),
-        Expanded(child: _buildIPInfo(ip)),
+        _buildOverallScore(response),
+        const SizedBox(height: 24),
+        _buildProviderCard(
+          title: 'VirusTotal',
+          icon: LucideIcons.shield,
+          status: response.virustotal.status,
+          message: response.virustotal.message,
+          child: response.virustotal.status == IntelProviderStatus.completed
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Malicious: ${response.virustotal.malicious} / ${response.virustotal.totalEngines}'),
+                    Text('Suspicious: ${response.virustotal.suspicious}'),
+                  ],
+                )
+              : null,
+        ),
+        const SizedBox(height: 16),
+        _buildProviderCard(
+          title: 'AbuseIPDB',
+          icon: LucideIcons.database,
+          status: response.abuseipdb.status,
+          message: response.abuseipdb.message,
+          child: response.abuseipdb.status == IntelProviderStatus.completed
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Confidence Score: ${response.abuseipdb.abuseConfidenceScore}%'),
+                    Text('Total Reports: ${response.abuseipdb.totalReports}'),
+                  ],
+                )
+              : null,
+        ),
+        const SizedBox(height: 16),
+        _buildProviderCard(
+          title: 'GeoIP',
+          icon: LucideIcons.mapPin,
+          status: response.geoip.status,
+          message: response.geoip.message,
+          child: response.geoip.status == IntelProviderStatus.completed
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Location: ${response.geoip.city}, ${response.geoip.country}'),
+                    Text('ISP: ${response.geoip.isp} (${response.geoip.asn})'),
+                    if (response.geoip.isProxy == true) const Text('Is Proxy: Yes', style: TextStyle(color: AppTheme.warning)),
+                    if (response.geoip.isHosting == true) const Text('Is Hosting: Yes', style: TextStyle(color: AppTheme.info)),
+                  ],
+                )
+              : null,
+        ),
       ],
     );
   }
 
-  Widget _buildMapPlaceholder(String location) {
+  Widget _buildOverallScore(IntelligenceResponse response) {
+    Color color = AppTheme.success;
+    if (response.severity == 'critical' || response.severity == 'high') color = AppTheme.error;
+    else if (response.severity == 'medium') color = AppTheme.warning;
+    
+    if (response.status != IntelStatus.completed && response.status != IntelStatus.partial) {
+      color = AppTheme.textSecondary;
+    }
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppTheme.bgSecondary,
-        border: Border.all(color: AppTheme.borderPrimary),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Geographic Location',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 16),
-          AspectRatio(
-            aspectRatio: 16 / 9,
-            child: Container(
-              decoration: BoxDecoration(
-                color: AppTheme.borderPrimary,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(LucideIcons.mapPin,
-                        color: AppTheme.primary, size: 64),
-                    const SizedBox(height: 12),
-                    const Text('Map View',
-                        style: TextStyle(color: AppTheme.textSecondary)),
-                    Text(
-                      location,
-                      style: const TextStyle(
-                          fontSize: 12, color: AppTheme.textTertiary),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildIPInfo(dynamic ip) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: AppTheme.bgSecondary,
-        border: Border.all(color: AppTheme.borderPrimary),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'IP Information',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 16),
-          _buildInfoRow('IP Address', ip.ip),
-          _buildInfoRow('Country Code', ip.country),
-          _buildInfoRow('Threat Level', ip.threatLevel.name.toUpperCase()),
-          _buildInfoRow('Last Seen', '2 minutes ago'),
-          _buildInfoRow('Total Requests', '1,234'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppTheme.borderPrimary,
-        borderRadius: BorderRadius.circular(8),
+        color: color.withOpacity(0.1),
+        border: Border.all(color: color.withOpacity(0.2)),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: AppTheme.textSecondary)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w500)),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Overall Risk Score',
+                style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                response.intelScore?.toString() ?? 'N/A',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                'Severity: ${response.severity?.toUpperCase() ?? 'UNKNOWN'}',
+                style: TextStyle(fontWeight: FontWeight.bold, color: color),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Status: ${response.status.name.toUpperCase()}',
+                style: const TextStyle(color: AppTheme.textSecondary),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  // ── Activity Chart ─────────────────────────────────────────────────────────
+  Widget _buildProviderCard({
+    required String title,
+    required IconData icon,
+    required IntelProviderStatus status,
+    required String? message,
+    Widget? child,
+  }) {
+    IconData statusIcon;
+    Color statusColor;
 
-  Widget _buildActivityChart(IPAnalysisProvider provider) {
+    switch (status) {
+      case IntelProviderStatus.completed:
+        statusIcon = LucideIcons.check;
+        statusColor = AppTheme.success;
+        break;
+      case IntelProviderStatus.notConfigured:
+        statusIcon = LucideIcons.settings;
+        statusColor = AppTheme.textSecondary;
+        break;
+      case IntelProviderStatus.notFound:
+        statusIcon = LucideIcons.searchX;
+        statusColor = AppTheme.textSecondary;
+        break;
+      case IntelProviderStatus.quotaExceeded:
+        statusIcon = LucideIcons.ban;
+        statusColor = AppTheme.error;
+        break;
+      case IntelProviderStatus.unavailable:
+      default:
+        statusIcon = LucideIcons.cloudOff;
+        statusColor = AppTheme.error;
+        break;
+    }
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: AppTheme.bgSecondary,
         border: Border.all(color: AppTheme.borderPrimary),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            children: const [
-              Icon(LucideIcons.activity, color: AppTheme.primary, size: 20),
-              SizedBox(width: 8),
+            children: [
+              Icon(icon, size: 24, color: AppTheme.primary),
+              const SizedBox(width: 12),
               Text(
-                'Activity History',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                title,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: statusColor.withOpacity(0.2)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(statusIcon, size: 14, color: statusColor),
+                    const SizedBox(width: 6),
+                    Text(
+                      status.name.toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: statusColor,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 24),
-          SizedBox(
-            height: 250,
-            child: LineChart(
-              LineChartData(
-                gridData: FlGridData(show: true, drawVerticalLine: false),
-                titlesData: FlTitlesData(
-                  rightTitles:
-                      AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  topTitles:
-                      AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                ),
-                borderData: FlBorderData(show: false),
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: provider.activityData
-                        .asMap()
-                        .entries
-                        .map((e) => FlSpot(
-                              e.key.toDouble(),
-                              e.value.requests.toDouble(),
-                            ))
-                        .toList(),
-                    isCurved: true,
-                    color: AppTheme.primary,
-                    barWidth: 2,
-                    dotData: FlDotData(show: true),
-                  ),
-                ],
-              ),
+          if (message != null && message.isNotEmpty && status != IntelProviderStatus.completed) ...[
+            const SizedBox(height: 16),
+            Text(
+              message,
+              style: const TextStyle(color: AppTheme.textSecondary),
             ),
-          ),
+          ],
+          if (child != null) ...[
+            const SizedBox(height: 16),
+            child,
+          ]
         ],
       ),
     );
   }
 
-  // ── Empty State ────────────────────────────────────────────────────────────
+  // ── Error Display ──────────────────────────────────────────────────────────
 
-  Widget _buildEmptyState() {
+  Widget _buildError(String errorMsg) {
     return Container(
-      padding: const EdgeInsets.all(64),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppTheme.bgSecondary,
-        border: Border.all(color: AppTheme.borderPrimary),
-        borderRadius: BorderRadius.circular(12),
+        color: AppTheme.error.withOpacity(0.1),
+        border: Border.all(color: AppTheme.error.withOpacity(0.2)),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
       ),
-      child: Column(
-        children: const [
-          Icon(LucideIcons.search, size: 64, color: AppTheme.textTertiary),
-          SizedBox(height: 16),
-          Text(
-            'No IP Analyzed Yet',
-            style: TextStyle(fontSize: 18, color: AppTheme.textSecondary),
-          ),
-          SizedBox(height: 8),
-          Text(
-            'Enter an IP address above to view detailed analysis',
-            style: TextStyle(fontSize: 14, color: AppTheme.textTertiary),
+      child: Row(
+        children: [
+          const Icon(LucideIcons.triangleAlert, color: AppTheme.error, size: 32),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Lookup Failed',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.error,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  errorMsg,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

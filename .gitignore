@@ -63,3 +63,8 @@ dist/
 
 # Logs
 *.log
+# Environment configurations
+config/dev.json
+config/prod.json
+.env
+.env.*

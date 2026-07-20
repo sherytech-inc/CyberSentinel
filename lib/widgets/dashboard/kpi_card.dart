@@ -11,8 +11,6 @@ class KPICard extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
-  final String change;
-  final ChangeType changeType;
   final Color iconColor;
   final Color iconBg;
 
@@ -21,26 +19,12 @@ class KPICard extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.value,
-    required this.change,
-    required this.changeType,
     required this.iconColor,
     required this.iconBg,
   });
 
   @override
   Widget build(BuildContext context) {
-    Color changeColor;
-    switch (changeType) {
-      case ChangeType.positive:
-        changeColor = AppTheme.success;
-        break;
-      case ChangeType.negative:
-        changeColor = AppTheme.error;
-        break;
-      case ChangeType.neutral:
-        changeColor = AppTheme.textSecondary;
-        break;
-    }
 
     return Container(
       padding: const EdgeInsets.all(AppTheme.spacing24),
@@ -88,14 +72,6 @@ class KPICard extends StatelessWidget {
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
                   color: AppTheme.textPrimary,
-                ),
-              ),
-              Text(
-                change,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: changeColor,
-                  fontWeight: FontWeight.w500,
                 ),
               ),
             ],

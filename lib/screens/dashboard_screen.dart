@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../core/theme/app_theme.dart';
+import '../models/global_metrics.dart';
+import '../providers/dashboard_provider.dart';
+import '../providers/metrics_provider.dart';
 import '../widgets/dashboard/threat_score_card.dart';
 import '../widgets/dashboard/kpi_card.dart';
 import '../widgets/dashboard/traffic_chart.dart';
 import '../widgets/dashboard/alerts_panel.dart';
 import '../widgets/dashboard/packet_classification.dart';
 import '../widgets/dashboard/malicious_ips_table.dart';
+import '../widgets/dashboard/capture_diagnostics_card.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -31,11 +36,26 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
+  String _formatCount(int count) {
+    if (count >= 1000000) {
+      return '${(count / 1000000).toStringAsFixed(1)}M';
+    }
+    if (count >= 1000) {
+      return '${(count / 1000).toStringAsFixed(1)}K';
+    }
+    return count.toString();
+  }
+
   Widget _buildKPIRow(BuildContext context) {
     final isMobile = AppTheme.isMobile(context);
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
+    return Selector<MetricsProvider, GlobalSecurityMetrics>(
+      selector: (context, provider) => provider.metrics,
+      builder: (context, metrics, _) {
+        final activeThreats = metrics.activeThreats.toString();
+        final packetsCount = _formatCount(metrics.totalPackets);
+        final suspiciousIPs = metrics.suspiciousIps.toString();
+
         if (isMobile) {
           return Column(
             children: [
@@ -44,9 +64,7 @@ class DashboardScreen extends StatelessWidget {
               KPICard(
                 icon: LucideIcons.triangleAlert,
                 label: 'Active Threats',
-                value: '23',
-                change: '+5',
-                changeType: ChangeType.negative,
+                value: activeThreats,
                 iconColor: AppTheme.error,
                 iconBg: AppTheme.error.withOpacity(0.1),
               ),
@@ -54,9 +72,7 @@ class DashboardScreen extends StatelessWidget {
               KPICard(
                 icon: LucideIcons.activity,
                 label: 'Packets Analyzed',
-                value: '2.4M',
-                change: '+12.5%',
-                changeType: ChangeType.neutral,
+                value: packetsCount,
                 iconColor: AppTheme.info,
                 iconBg: AppTheme.info.withOpacity(0.1),
               ),
@@ -64,9 +80,7 @@ class DashboardScreen extends StatelessWidget {
               KPICard(
                 icon: LucideIcons.globe,
                 label: 'Suspicious IPs',
-                value: '156',
-                change: '-8',
-                changeType: ChangeType.positive,
+                value: suspiciousIPs,
                 iconColor: AppTheme.warning,
                 iconBg: AppTheme.warning.withOpacity(0.1),
               ),
@@ -82,9 +96,7 @@ class DashboardScreen extends StatelessWidget {
               child: KPICard(
                 icon: LucideIcons.triangleAlert,
                 label: 'Active Threats',
-                value: '23',
-                change: '+5',
-                changeType: ChangeType.negative,
+                value: activeThreats,
                 iconColor: AppTheme.error,
                 iconBg: AppTheme.error.withOpacity(0.1),
               ),
@@ -94,9 +106,7 @@ class DashboardScreen extends StatelessWidget {
               child: KPICard(
                 icon: LucideIcons.activity,
                 label: 'Packets Analyzed',
-                value: '2.4M',
-                change: '+12.5%',
-                changeType: ChangeType.neutral,
+                value: packetsCount,
                 iconColor: AppTheme.info,
                 iconBg: AppTheme.info.withOpacity(0.1),
               ),
@@ -106,9 +116,7 @@ class DashboardScreen extends StatelessWidget {
               child: KPICard(
                 icon: LucideIcons.globe,
                 label: 'Suspicious IPs',
-                value: '156',
-                change: '-8',
-                changeType: ChangeType.positive,
+                value: suspiciousIPs,
                 iconColor: AppTheme.warning,
                 iconBg: AppTheme.warning.withOpacity(0.1),
               ),
@@ -118,6 +126,7 @@ class DashboardScreen extends StatelessWidget {
       },
     );
   }
+
 
   Widget _buildTrafficAlertsRow(BuildContext context) {
     final isMobile = AppTheme.isMobile(context);
@@ -142,7 +151,11 @@ class DashboardScreen extends StatelessWidget {
         const SizedBox(width: AppTheme.spacing16),
         const Expanded(
           flex: 1,
-          child: AlertsPanel(),
+          child: Column(
+            children: [
+              AlertsPanel(),
+            ],
+          ),
         ),
       ],
     );

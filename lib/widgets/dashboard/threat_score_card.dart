@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../core/theme/app_theme.dart';
-import '../../providers/dashboard_provider.dart';
+import '../../providers/metrics_provider.dart';
 
 class ThreatScoreCard extends StatelessWidget {
   const ThreatScoreCard({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<DashboardProvider>(
-      builder: (context, provider, _) {
-        final score = provider.threatScore;
+    return Selector<MetricsProvider, int>(
+      selector: (context, provider) => provider.metrics.threatScore,
+      builder: (context, score, _) {
         final color = _getColor(score);
 
         return Container(
@@ -51,13 +51,19 @@ class ThreatScoreCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: AppTheme.spacing16),
-              Text(
-                '$score%',
-                style: const TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textPrimary,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '${score.toStringAsFixed(0)} / 100',
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: AppTheme.spacing4),
               const Text(
@@ -90,18 +96,23 @@ class ThreatScoreCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Critical',
-                    style: TextStyle(
+                    _getSeverityLabel(score),
+                    style: const TextStyle(
                       fontSize: 12,
                       color: AppTheme.textTertiary,
                     ),
                   ),
-                  Text(
-                    'High Risk Detected',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: color,
-                      fontWeight: FontWeight.w500,
+                  const SizedBox(width: AppTheme.spacing8),
+                  Expanded(
+                    child: Text(
+                      _getRiskDescription(score),
+                      textAlign: TextAlign.right,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: color,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
                 ],
@@ -112,6 +123,19 @@ class ThreatScoreCard extends StatelessWidget {
       },
     );
   }
+
+  String _getSeverityLabel(int score) {
+    if (score >= 70) return 'Critical';
+    if (score >= 40) return 'Medium';
+    return 'Safe';
+  }
+
+  String _getRiskDescription(int score) {
+    if (score >= 70) return 'High Risk Detected';
+    if (score >= 40) return 'Warning Risk Detected';
+    return 'No Threats Detected';
+  }
+
 
   Color _getColor(int score) {
     if (score >= 70) return AppTheme.error;

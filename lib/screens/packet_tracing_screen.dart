@@ -5,27 +5,81 @@ import '../core/theme/app_theme.dart';
 import '../providers/packet_tracing_provider.dart';
 import '../models/packet.dart';
 
-class PacketTracingScreen extends StatelessWidget {
+class PacketTracingScreen extends StatefulWidget {
   const PacketTracingScreen({super.key});
+
+  @override
+  State<PacketTracingScreen> createState() => _PacketTracingScreenState();
+}
+
+class _PacketTracingScreenState extends State<PacketTracingScreen> {
+  late final ScrollController _verticalController;
+  late final ScrollController _horizontalController;
+
+  @override
+  void initState() {
+    super.initState();
+    _verticalController = ScrollController();
+    _horizontalController = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _verticalController.dispose();
+    _horizontalController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<PacketTracingProvider>(
       builder: (context, provider, _) {
-        return SingleChildScrollView(
-          child: Column(
-            children: [
-              _buildControlBar(context, provider),
+        return Column(
+          children: [
+            _buildControlBar(context, provider),
+            if (provider.error != null) ...[
               const SizedBox(height: AppTheme.spacing16),
-              _buildMainContent(context, provider),
+              _buildErrorBanner(provider.error!),
             ],
-          ),
+            const SizedBox(height: AppTheme.spacing16),
+            Expanded(child: _buildMainContent(context, provider)),
+          ],
         );
       },
     );
   }
 
-  Widget _buildControlBar(BuildContext context, PacketTracingProvider provider) {
+  Widget _buildErrorBanner(String message) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: AppTheme.spacing24),
+      padding: const EdgeInsets.all(AppTheme.spacing16),
+      decoration: BoxDecoration(
+        color: AppTheme.error.withOpacity(0.12),
+        border: Border.all(color: AppTheme.error.withOpacity(0.35)),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(LucideIcons.triangleAlert,
+              color: AppTheme.error, size: 18),
+          const SizedBox(width: AppTheme.spacing12),
+          Expanded(
+            child: Text(
+              'Backend error: $message',
+              style: const TextStyle(
+                color: AppTheme.textPrimary,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildControlBar(
+      BuildContext context, PacketTracingProvider provider) {
     return Container(
       padding: const EdgeInsets.all(AppTheme.spacing24),
       decoration: BoxDecoration(
@@ -35,20 +89,28 @@ class PacketTracingScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Row(
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: AppTheme.spacing12,
+            runSpacing: AppTheme.spacing12,
             children: [
               ElevatedButton.icon(
-                onPressed: provider.toggleCapturing,
+                onPressed: provider.isTransitioning || provider.captureState == CaptureState.unavailable 
+                    ? null 
+                    : provider.toggleCapturing,
                 icon: Icon(
                   provider.isCapturing ? LucideIcons.pause : LucideIcons.play,
                   size: 20,
                 ),
                 label: Text(
+                  provider.captureState == CaptureState.starting ? 'Starting...' :
+                  provider.captureState == CaptureState.stopping ? 'Stopping...' :
                   provider.isCapturing ? 'Stop Capture' : 'Start Capture',
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor:
-                      provider.isCapturing ? AppTheme.error : AppTheme.primary,
+                      provider.isCapturing ? AppTheme.warning : AppTheme.primary,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppTheme.spacing24,
@@ -59,32 +121,60 @@ class PacketTracingScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              const Spacer(),
-              Icon(LucideIcons.filter, color: AppTheme.textSecondary, size: 20),
-              const SizedBox(width: AppTheme.spacing12),
-              _buildDropdown(
-                value: provider.protocolFilter,
-                items: ['all', 'http', 'ssh', 'ftp', 'dns'],
-                labels: {
-                  'all': 'All Protocols',
-                  'http': 'HTTP/HTTPS',
-                  'ssh': 'SSH',
-                  'ftp': 'FTP',
-                  'dns': 'DNS',
-                },
-                onChanged: provider.setProtocolFilter,
-              ),
-              const SizedBox(width: AppTheme.spacing12),
-              _buildDropdown(
-                value: provider.riskFilter,
-                items: ['all', 'normal', 'suspicious', 'malicious'],
-                labels: {
-                  'all': 'All Risk Levels',
-                  'normal': 'Normal',
-                  'suspicious': 'Suspicious',
-                  'malicious': 'Malicious',
-                },
-                onChanged: provider.setRiskFilter,
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: AppTheme.spacing12,
+                runSpacing: AppTheme.spacing12,
+                children: [
+                  Icon(LucideIcons.filter, color: AppTheme.textSecondary, size: 20),
+                  _buildDropdown(
+                    value: provider.protocolFilter,
+                    items: ['all', 'http', 'ssh', 'ftp', 'dns'],
+                    labels: {
+                      'all': 'All Protocols',
+                      'http': 'HTTP/HTTPS',
+                      'ssh': 'SSH',
+                      'ftp': 'FTP',
+                      'dns': 'DNS',
+                    },
+                    onChanged: provider.setProtocolFilter,
+                  ),
+                  _buildDropdown(
+                    value: provider.riskFilter,
+                    items: ['all', 'normal', 'suspicious', 'malicious'],
+                    labels: {
+                      'all': 'All Risk Levels',
+                      'normal': 'Normal',
+                      'suspicious': 'Suspicious',
+                      'malicious': 'Malicious',
+                    },
+                    onChanged: provider.setRiskFilter,
+                  ),
+                  SizedBox(
+                    width: 200,
+                    height: 40,
+                    child: TextField(
+                      onChanged: provider.setSearchQuery,
+                      style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
+                      decoration: InputDecoration(
+                        hintText: 'Search IP or Port...',
+                        hintStyle: const TextStyle(color: AppTheme.textSecondary),
+                        prefixIcon: const Icon(LucideIcons.search, size: 16, color: AppTheme.textSecondary),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                        filled: true,
+                        fillColor: AppTheme.bgPrimary,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                          borderSide: const BorderSide(color: AppTheme.borderPrimary),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                          borderSide: const BorderSide(color: AppTheme.borderPrimary),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -132,7 +222,7 @@ class PacketTracingScreen extends StatelessWidget {
     if (isMobile) {
       return Column(
         children: [
-          _buildPacketList(provider),
+          Expanded(child: _buildPacketList(provider)),
           const SizedBox(height: AppTheme.spacing16),
           _buildDetailPanel(provider),
         ],
@@ -179,158 +269,222 @@ class PacketTracingScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  provider.isCapturing ? 'Capturing packets...' : 'Paused',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: AppTheme.textSecondary,
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Row(
+                        children: [
+                          _buildCaptureStatusChip(provider.captureState),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      provider.totalPacketsReceived > provider.packets.length
+                          ? 'Displaying ${provider.packets.length} of ${provider.totalPacketsReceived} packets'
+                          : '${provider.packets.length} packets',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
-              headingRowColor: MaterialStateProperty.all(AppTheme.borderPrimary),
-              columns: const [
-                DataColumn(
-                  label: Text(
-                    'IP ADDRESS',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: AppTheme.textTertiary,
-                    ),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'PORT',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: AppTheme.textTertiary,
-                    ),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'PROTOCOL',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: AppTheme.textTertiary,
-                    ),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'SIZE',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: AppTheme.textTertiary,
-                    ),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'STATUS',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: AppTheme.textTertiary,
-                    ),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'TIME',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: AppTheme.textTertiary,
-                    ),
-                  ),
-                ),
-              ],
-              rows: provider.packets.map((packet) {
-                final isSelected = provider.selectedPacket?.id == packet.id;
-                final badge = _getStatusBadge(packet.status);
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return Scrollbar(
+                  controller: _verticalController,
+                  thumbVisibility: true,
+                  child: SingleChildScrollView(
+                    controller: _verticalController,
+                    scrollDirection: Axis.vertical,
+                    child: Scrollbar(
+                      controller: _horizontalController,
+                      notificationPredicate: (notification) =>
+                          notification.metrics.axis == Axis.horizontal,
+                      child: SingleChildScrollView(
+                        controller: _horizontalController,
+                        scrollDirection: Axis.horizontal,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minWidth: constraints.maxWidth,
+                          ),
+                          child: DataTable(
+                            headingRowColor:
+                                MaterialStateProperty.all(AppTheme.borderPrimary),
+                            columns: [
+                              DataColumn(
+                                label: SizedBox(
+                                  width: 120,
+                                  child: _colHeader('IP ADDRESS'),
+                                ),
+                              ),
+                              DataColumn(
+                                label: SizedBox(
+                                  width: 60,
+                                  child: _colHeader('PORT'),
+                                ),
+                              ),
+                              DataColumn(
+                                label: SizedBox(
+                                  width: 80,
+                                  child: _colHeader('PROTOCOL'),
+                                ),
+                              ),
+                              DataColumn(
+                                label: SizedBox(
+                                  width: 60,
+                                  child: _colHeader('SIZE'),
+                                ),
+                              ),
+                              DataColumn(
+                                label: SizedBox(
+                                  width: 100,
+                                  child: _colHeader('STATUS'),
+                                ),
+                              ),
+                              DataColumn(
+                                label: SizedBox(
+                                  width: 80,
+                                  child: _colHeader('TIME'),
+                                ),
+                              ),
+                            ],
+                            rows: provider.packets.map((packet) {
+                              final isSelected = provider.selectedPacketId == packet.stableId;
+                              final badge = _getStatusBadge(packet.status);
 
-                return DataRow(
-                  selected: isSelected,
-                  onSelectChanged: (_) => provider.selectPacket(packet),
-                  color: MaterialStateProperty.resolveWith((states) {
-                    if (states.contains(MaterialState.selected)) {
-                      return AppTheme.borderPrimary;
-                    }
-                    if (states.contains(MaterialState.hovered)) {
-                      return AppTheme.borderPrimary;
-                    }
-                    return Colors.transparent;
-                  }),
-                  cells: [
-                    DataCell(Text(
-                      packet.ip,
-                      style: const TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 14,
-                      ),
-                    )),
-                    DataCell(Text(
-                      packet.port.toString(),
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: AppTheme.textSecondary,
-                      ),
-                    )),
-                    DataCell(Text(
-                      packet.protocol,
-                      style: const TextStyle(fontSize: 14),
-                    )),
-                    DataCell(Text(
-                      packet.size,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: AppTheme.textSecondary,
-                      ),
-                    )),
-                    DataCell(
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: badge.bg,
-                          border: Border.all(color: badge.border),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          packet.status.name,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: badge.text,
+                              return DataRow(
+                                selected: isSelected,
+                                onSelectChanged: (selected) {
+                                  if (selected == true) {
+                                    provider.selectPacketById(packet.stableId);
+                                  } else {
+                                    provider.clearSelection();
+                                  }
+                                },
+                                color: MaterialStateProperty.resolveWith((states) {
+                                  if (states.contains(MaterialState.selected)) {
+                                    return AppTheme.borderPrimary;
+                                  }
+                                  if (states.contains(MaterialState.hovered)) {
+                                    return AppTheme.borderPrimary;
+                                  }
+                                  return Colors.transparent;
+                                }),
+                                cells: [
+                                  DataCell(
+                                    SizedBox(
+                                      width: 120,
+                                      child: Tooltip(
+                                        message: packet.ip,
+                                        child: Text(
+                                          packet.ip,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontFamily: 'monospace',
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  DataCell(
+                                    SizedBox(
+                                      width: 60,
+                                      child: Text(
+                                        packet.port.toString(),
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          color: AppTheme.textSecondary,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  DataCell(
+                                    SizedBox(
+                                      width: 80,
+                                      child: _buildProtocolBadge(packet.protocol),
+                                    ),
+                                  ),
+                                  DataCell(
+                                    SizedBox(
+                                      width: 60,
+                                      child: Text(
+                                        packet.size,
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          color: AppTheme.textSecondary,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  DataCell(
+                                    SizedBox(
+                                      width: 100,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: badge.bg,
+                                          border: Border.all(color: badge.border),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          packet.mlClassification,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: badge.text,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  DataCell(
+                                    SizedBox(
+                                      width: 80,
+                                      child: Text(
+                                        packet.timestamp,
+                                        style: const TextStyle(
+                                          fontFamily: 'monospace',
+                                          fontSize: 14,
+                                          color: AppTheme.textSecondary,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            }).toList(),
                           ),
                         ),
                       ),
                     ),
-                    DataCell(Text(
-                      packet.timestamp,
-                      style: const TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 14,
-                        color: AppTheme.textSecondary,
-                      ),
-                    )),
-                  ],
+                  ),
                 );
-              }).toList(),
+              },
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _colHeader(String title) {
+    return Text(
+      title,
+      style: const TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+        color: AppTheme.textTertiary,
       ),
     );
   }
@@ -346,13 +500,26 @@ class PacketTracingScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Packet Details',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.textPrimary,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Packet Details',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+              if (provider.selectedPacket != null)
+                IconButton(
+                  icon: const Icon(LucideIcons.x, size: 20, color: AppTheme.textSecondary),
+                  onPressed: provider.clearSelection,
+                  tooltip: 'Clear selection',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+            ],
           ),
           const SizedBox(height: AppTheme.spacing24),
           if (provider.selectedPacket != null) ...[
@@ -362,7 +529,18 @@ class PacketTracingScreen extends StatelessWidget {
             _buildDetailItem('Packet Size', provider.selectedPacket!.size),
             _buildDetailItem(
               'ML Classification',
-              provider.selectedPacket!.status.name.toUpperCase(),
+              provider.selectedPacket!.mlClassification,
+              textColor: _getClassificationColor(provider.selectedPacket!.mlClassification),
+            ),
+            _buildDetailItem(
+              'Decision Severity',
+              provider.selectedPacket!.decisionSeverity,
+              textColor: _getSeverityColor(provider.selectedPacket!.decisionSeverity),
+            ),
+            _buildDetailItem(
+              'Final Risk Score',
+              provider.selectedPacket!.finalRiskScore,
+              textColor: AppTheme.textPrimary,
             ),
             _buildDetailItem('Timestamp', provider.selectedPacket!.timestamp),
             const Divider(color: AppTheme.borderPrimary, height: 32),
@@ -407,7 +585,7 @@ class PacketTracingScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailItem(String label, String value) {
+  Widget _buildDetailItem(String label, String value, {Color? textColor}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: Column(
@@ -423,9 +601,10 @@ class PacketTracingScreen extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
-              color: AppTheme.textPrimary,
+              fontWeight: textColor != null ? FontWeight.bold : FontWeight.normal,
+              color: textColor ?? AppTheme.textPrimary,
             ),
           ),
         ],
@@ -433,9 +612,136 @@ class PacketTracingScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildProtocolBadge(String protocol) {
+    Color color;
+    switch (protocol.toUpperCase()) {
+      case 'HTTP':
+      case 'HTTPS':
+        color = Colors.blue;
+        break;
+      case 'SSH':
+        color = Colors.purple;
+        break;
+      case 'FTP':
+        color = Colors.orange;
+        break;
+      case 'DNS':
+        color = Colors.teal;
+        break;
+      default:
+        color = AppTheme.textSecondary;
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        border: Border.all(color: color.withOpacity(0.3)),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        protocol.toUpperCase(),
+        style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  Widget _buildCaptureStatusChip(CaptureState state) {
+    Color color;
+    String label;
+    IconData icon;
+
+    switch (state) {
+      case CaptureState.running:
+        color = AppTheme.success;
+        label = 'Capturing';
+        icon = Icons.circle;
+        break;
+      case CaptureState.stopped:
+        color = AppTheme.textSecondary;
+        label = 'Stopped';
+        icon = Icons.stop_circle;
+        break;
+      case CaptureState.starting:
+        color = AppTheme.warning;
+        label = 'Starting...';
+        icon = Icons.hourglass_empty;
+        break;
+      case CaptureState.stopping:
+        color = AppTheme.warning;
+        label = 'Stopping...';
+        icon = Icons.hourglass_empty;
+        break;
+      case CaptureState.error:
+        color = AppTheme.error;
+        label = 'Error';
+        icon = Icons.error_outline;
+        break;
+      case CaptureState.unavailable:
+      default:
+        color = AppTheme.textTertiary;
+        label = 'Unavailable';
+        icon = Icons.cloud_off;
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        border: Border.all(color: color.withOpacity(0.3)),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 10, color: color),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getClassificationColor(String classification) {
+    switch (classification) {
+      case 'BENIGN':
+        return AppTheme.success;
+      case 'SUSPICIOUS':
+        return AppTheme.warning;
+      case 'MALICIOUS':
+        return AppTheme.error;
+      default:
+        return AppTheme.textPrimary;
+    }
+  }
+
+  Color _getSeverityColor(String severity) {
+    switch (severity) {
+      case 'INFO':
+        return Colors.blue;
+      case 'LOW':
+        return Colors.blueGrey;
+      case 'MEDIUM':
+        return Colors.orange;
+      case 'HIGH':
+        return Colors.deepOrange;
+      case 'CRITICAL':
+        return AppTheme.error;
+      default:
+        return AppTheme.textPrimary;
+    }
+  }
+
   StatusBadge _getStatusBadge(PacketStatus status) {
     switch (status) {
-      case PacketStatus.normal:
+      case PacketStatus.benign:
         return StatusBadge(
           bg: AppTheme.success.withOpacity(0.1),
           text: AppTheme.success,

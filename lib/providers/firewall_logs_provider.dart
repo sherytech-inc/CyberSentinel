@@ -1,83 +1,127 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'session_cleanup_coordinator.dart';
 import '../models/firewall_log.dart';
+import '../services/api_service.dart';
 
 class FirewallLogsProvider extends ChangeNotifier {
   bool _autoFetch = true;
-  
+  bool _isLoading = false;
+  String? _error;
+  Timer? _refreshTimer;
+
   bool get autoFetch => _autoFetch;
-  
-  final List<FirewallLog> _logs = [
-    FirewallLog(
-      id: '1',
-      ip: '185.220.101.45',
-      port: 22,
-      action: FirewallAction.blocked,
-      timestamp: '2026-04-12 14:23:45',
-      rule: 'SSH-BRUTE-FORCE',
-    ),
-    FirewallLog(
-      id: '2',
-      ip: '103.56.207.23',
-      port: 443,
-      action: FirewallAction.allowed,
-      timestamp: '2026-04-12 14:23:42',
-      rule: 'HTTPS-ALLOW',
-    ),
-    FirewallLog(
-      id: '3',
-      ip: '45.142.120.67',
-      port: 3389,
-      action: FirewallAction.blocked,
-      timestamp: '2026-04-12 14:23:38',
-      rule: 'RDP-BLOCK',
-    ),
-    FirewallLog(
-      id: '4',
-      ip: '193.164.132.88',
-      port: 80,
-      action: FirewallAction.allowed,
-      timestamp: '2026-04-12 14:23:35',
-      rule: 'HTTP-ALLOW',
-    ),
-    FirewallLog(
-      id: '5',
-      ip: '89.248.167.131',
-      port: 23,
-      action: FirewallAction.blocked,
-      timestamp: '2026-04-12 14:23:30',
-      rule: 'TELNET-BLOCK',
-    ),
-    FirewallLog(
-      id: '6',
-      ip: '178.128.141.45',
-      port: 443,
-      action: FirewallAction.allowed,
-      timestamp: '2026-04-12 14:23:28',
-      rule: 'HTTPS-ALLOW',
-    ),
-    FirewallLog(
-      id: '7',
-      ip: '167.99.241.32',
-      port: 1433,
-      action: FirewallAction.blocked,
-      timestamp: '2026-04-12 14:23:25',
-      rule: 'SQL-BLOCK',
-    ),
-  ];
-  
+  bool get isLoading => _isLoading;
+  String? get error => _error;
+
+  List<FirewallLog> _logs = [];
+
+  FirewallLogsProvider() {
+    SessionCleanupCoordinator.registerCleanupTask(clear);
+    fetchLogs();
+    _startAutoRefresh();
+  }
+
+  void updateRefreshInterval(Duration? interval) {
+    _refreshTimer?.cancel();
+    if (interval != null) {
+      _refreshTimer = Timer.periodic(interval, (_) {
+        if (_autoFetch) fetchLogs();
+      });
+    }
+  }
+
+  void _startAutoRefresh() {
+    updateRefreshInterval(const Duration(seconds: 15));
+  }
+
   List<FirewallLog> get logs => _logs;
-  
+
   int get blockedCount =>
       _logs.where((log) => log.action == FirewallAction.blocked).length;
-  
+
   int get allowedCount =>
       _logs.where((log) => log.action == FirewallAction.allowed).length;
-  
+
   List<FirewallLog> get blockedLogs =>
       _logs.where((log) => log.action == FirewallAction.blocked).take(5).toList();
-  
+
+  int _currentPage = 1;
+  final int _pageSize = 50;
+  bool _hasMore = true;
+  bool get hasMore => _hasMore;
+
+  /// Fetch firewall logs from the backend API.
+  Future<void> fetchLogs({bool refresh = false}) async {
+    if (_isLoading) return;
+
+    if (refresh) {
+      _currentPage = 1;
+      _hasMore = true;
+    }
+
+    if (!_hasMore) return;
+
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      final result = await ApiService.fetchFirewallLogs(
+        page: _currentPage,
+        pageSize: _pageSize,
+      );
+
+      if (result.containsKey('error') && result['error'] == true) {
+        _error = result['message'] as String? ?? 'Failed to load firewall logs';
+        _isLoading = false;
+        notifyListeners();
+        return;
+      }
+
+      final payload = result.containsKey('data') && result['data'] is Map
+          ? result['data'] as Map<String, dynamic>
+          : result;
+
+      final items = payload['items'] as List<dynamic>? ?? [];
+      final total = payload['total'] as int? ?? 0;
+      
+      final newLogs = items
+          .map((item) => FirewallLog.fromJson(item as Map<String, dynamic>))
+          .toList();
+
+      if (refresh) {
+        _logs = newLogs;
+      } else {
+        _logs.addAll(newLogs);
+      }
+
+      _hasMore = _logs.length < total && newLogs.isNotEmpty;
+      if (_hasMore) {
+        _currentPage++;
+      }
+
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   void toggleAutoFetch() {
     _autoFetch = !_autoFetch;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  void clear() {
+    // Add specific clear logic here
     notifyListeners();
   }
 }

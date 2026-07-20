@@ -40,7 +40,28 @@ class AlertsPanel extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: AppTheme.spacing24),
-              ...provider.alerts.map((alert) => _buildAlert(alert)).toList(),
+              SizedBox(
+                height: 450,
+                child: provider.alerts.isEmpty ?
+                  const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text("🛡", style: TextStyle(fontSize: 32)),
+                        SizedBox(height: 16),
+                        Text("No alerts detected.\nYour network is currently secure.", textAlign: TextAlign.center, style: TextStyle(color: AppTheme.textSecondary, height: 1.5)),
+                      ],
+                    ),
+                  ) :
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const BouncingScrollPhysics(),
+                    itemCount: provider.alerts.length > 10 ? 10 : provider.alerts.length,
+                    itemBuilder: (context, index) {
+                      return _buildAlert(provider.alerts[index]);
+                    },
+                  ),
+              ),
             ],
           ),
         );

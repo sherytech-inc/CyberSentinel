@@ -40,7 +40,39 @@ class AlertsPanel extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: AppTheme.spacing24),
-              ...provider.alerts.map((alert) => _buildAlert(alert)).toList(),
+              SizedBox(
+                height: 450,
+                child: provider.alerts.isEmpty
+                    ? const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.shield_outlined,
+                              size: 44,
+                              color: AppTheme.textTertiary,
+                            ),
+                            SizedBox(height: 16),
+                            Text(
+                                "No alert data available\nWaiting for live packet capture",
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                    color: AppTheme.textSecondary,
+                                    height: 1.5)),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        physics: const BouncingScrollPhysics(),
+                        itemCount: provider.alerts.length > 10
+                            ? 10
+                            : provider.alerts.length,
+                        itemBuilder: (context, index) {
+                          return _buildAlert(provider.alerts[index]);
+                        },
+                      ),
+              ),
             ],
           ),
         );

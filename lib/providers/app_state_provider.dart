@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'session_cleanup_coordinator.dart';
 
 /// Tracks the currently active navigation route across the app.
 ///
@@ -6,6 +7,10 @@ import 'package:flutter/material.dart';
 /// or GoRouter reports a route change via [GoRouterState].
 /// Any widget depending on [currentRoute] or [pageTitle] rebuilds automatically.
 class AppStateProvider extends ChangeNotifier {
+  AppStateProvider() {
+    SessionCleanupCoordinator.registerCleanupTask(clear);
+  }
+
   // Must match the GoRouter initial route '/' not '/dashboard'
   String _currentRoute = '/';
 
@@ -16,10 +21,12 @@ class AppStateProvider extends ChangeNotifier {
     '/': 'Dashboard',
     '/packet-tracing': 'Packet Tracing',
     '/firewall-logs': 'Firewall Logs',
+    '/threat-response': 'Threat Response Center',
     '/virus-scanner': 'Virus Scanner',
     '/ip-analysis': 'IP Analysis',
     '/reports': 'Reports',
     '/settings': 'Settings',
+    '/ai-analyst': 'AI Security Analyst',
   };
 
   String get pageTitle => _routeTitles[_currentRoute] ?? _currentRoute;
@@ -29,6 +36,11 @@ class AppStateProvider extends ChangeNotifier {
   void setCurrentRoute(String route) {
     if (_currentRoute == route) return;
     _currentRoute = route;
+    notifyListeners();
+  }
+
+  void clear() {
+    // Add specific clear logic here
     notifyListeners();
   }
 }

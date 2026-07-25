@@ -2,7 +2,24 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- macOS App Sandbox (required for distribution) -->
 	<key>com.apple.security.app-sandbox</key>
 	<true/>
+
+	<!-- Outbound network access: Supabase + loopback readiness endpoint -->
+	<key>com.apple.security.network.client</key>
+	<true/>
+
+	<!-- Inbound network: loopback sidecar socket (bundled mode) -->
+	<key>com.apple.security.network.server</key>
+	<true/>
+
+	<!--
+	  Release mode uses 'bundled' mode exclusively.
+	  The sidecar executable lives inside CyberSentinel.app/Contents/Resources/
+	  and is launched by SidecarManager using the absolute resolved path — no venv,
+	  no Python, no /Users/shehrozali paths are referenced.
+	  No temporary-exception entitlements are needed or allowed here.
+	-->
 </dict>
 </plist>

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'dart:math' as math;
 import '../../core/theme/app_theme.dart';
 import '../../providers/dashboard_provider.dart';
 
@@ -22,169 +23,345 @@ class TrafficChart extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
-                        'Real-Time Network Traffic',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.textPrimary,
+                  Expanded(
+                    flex: 2,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          provider.isMonitoringActive
+                              ? 'Real-Time Network Traffic'
+                              : 'Last Session Overview',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.textPrimary,
+                          ),
                         ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'Packets per 5-minute interval',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: AppTheme.textSecondary,
+                        const SizedBox(height: 4),
+                        Text(
+                          provider.isMonitoringActive
+                              ? 'Packets per update'
+                              : 'Final classification and analysis distribution',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: AppTheme.textSecondary,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                  Row(
-                    children: [
-                      _buildLegendItem('Normal', AppTheme.success),
-                      const SizedBox(width: AppTheme.spacing16),
-                      _buildLegendItem('Suspicious', AppTheme.warning),
-                      const SizedBox(width: AppTheme.spacing16),
-                      _buildLegendItem('Malicious', AppTheme.error),
-                    ],
+                  const SizedBox(width: AppTheme.spacing16),
+                  Flexible(
+                    flex: 3,
+                    child: Wrap(
+                      alignment: WrapAlignment.end,
+                      spacing: AppTheme.spacing16,
+                      runSpacing: AppTheme.spacing8,
+                      children: [
+                        _buildLegendItem('Normal', AppTheme.success),
+                        _buildLegendItem('Suspicious', AppTheme.warning),
+                        _buildLegendItem('Malicious', AppTheme.error),
+                        _buildLegendItem(
+                          provider.isMonitoringActive
+                              ? 'Pending'
+                              : 'Not analyzed',
+                          AppTheme.primary,
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: AppTheme.spacing24),
-              SizedBox(
-                height: 280,
-                child: LineChart(
-                  LineChartData(
-                    gridData: FlGridData(
-                      show: true,
-                      drawVerticalLine: false,
-                      horizontalInterval: 1000,
-                      getDrawingHorizontalLine: (value) {
-                        return FlLine(
-                          color: AppTheme.borderPrimary,
-                          strokeWidth: 1,
-                          dashArray: [3, 3],
-                        );
-                      },
-                    ),
-                    titlesData: FlTitlesData(
-                      show: true,
-                      rightTitles: AxisTitles(
-                        sideTitles: SideTitles(showTitles: false),
+              if (!provider.isMonitoringActive && provider.lastSession != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: AppTheme.spacing16),
+                  child: Wrap(
+                    spacing: AppTheme.spacing24,
+                    runSpacing: AppTheme.spacing8,
+                    children: [
+                      _buildSessionMetric(
+                          'Captured', provider.capturedPacketsCount.toString()),
+                      _buildSessionMetric(
+                          'Analyzed', provider.analyzedPacketsCount.toString()),
+                      _buildSessionMetric(
+                        'Analysis Completion',
+                        '${(provider.analysisCompletion * 100).toStringAsFixed(1)}%',
                       ),
-                      topTitles: AxisTitles(
-                        sideTitles: SideTitles(showTitles: false),
-                      ),
-                      bottomTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                          showTitles: true,
-                          reservedSize: 30,
-                          interval: 5,
-                          getTitlesWidget: (value, meta) {
-                            if (value.toInt() >= 0 &&
-                                value.toInt() < provider.trafficData.length) {
-                              if (value.toInt() % 6 == 0) {
-                                return Padding(
-                                  padding: const EdgeInsets.only(top: 8.0),
-                                  child: Text(
-                                    provider.trafficData[value.toInt()].time,
-                                    style: const TextStyle(
-                                      color: AppTheme.textTertiary,
-                                      fontSize: 11,
-                                    ),
-                                  ),
-                                );
-                              }
-                            }
-                            return const SizedBox();
-                          },
-                        ),
-                      ),
-                      leftTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                          showTitles: true,
-                          reservedSize: 42,
-                          interval: 2000,
-                          getTitlesWidget: (value, meta) {
-                            return Text(
-                              value.toInt().toString(),
-                              style: const TextStyle(
-                                color: AppTheme.textTertiary,
-                                fontSize: 11,
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                    borderData: FlBorderData(show: false),
-                    minX: 0,
-                    maxX: provider.trafficData.length.toDouble() - 1,
-                    minY: 0,
-                    maxY: 10000,
-                    lineBarsData: [
-                      LineChartBarData(
-                        spots: provider.trafficData
-                            .asMap()
-                            .entries
-                            .map((e) => FlSpot(
-                                  e.key.toDouble(),
-                                  e.value.normal.toDouble(),
-                                ))
-                            .toList(),
-                        isCurved: true,
-                        color: AppTheme.success,
-                        barWidth: 2,
-                        isStrokeCapRound: true,
-                        dotData: FlDotData(show: false),
-                        belowBarData: BarAreaData(show: false),
-                      ),
-                      LineChartBarData(
-                        spots: provider.trafficData
-                            .asMap()
-                            .entries
-                            .map((e) => FlSpot(
-                                  e.key.toDouble(),
-                                  e.value.suspicious.toDouble(),
-                                ))
-                            .toList(),
-                        isCurved: true,
-                        color: AppTheme.warning,
-                        barWidth: 2,
-                        isStrokeCapRound: true,
-                        dotData: FlDotData(show: false),
-                        belowBarData: BarAreaData(show: false),
-                      ),
-                      LineChartBarData(
-                        spots: provider.trafficData
-                            .asMap()
-                            .entries
-                            .map((e) => FlSpot(
-                                  e.key.toDouble(),
-                                  e.value.malicious.toDouble(),
-                                ))
-                            .toList(),
-                        isCurved: true,
-                        color: AppTheme.error,
-                        barWidth: 2,
-                        isStrokeCapRound: true,
-                        dotData: FlDotData(show: false),
-                        belowBarData: BarAreaData(show: false),
-                      ),
+                      _buildSessionMetric('Highest Severity',
+                          provider.lastSession?.highestSeverity ?? 'N/A'),
                     ],
                   ),
                 ),
+              const SizedBox(height: AppTheme.spacing24),
+              SizedBox(
+                height: 350,
+                child: () {
+                  if (!provider.isMonitoringActive &&
+                      provider.lastSession == null) {
+                    return const Center(
+                      child: Text('No completed session data available',
+                          style: TextStyle(color: AppTheme.textSecondary)),
+                    );
+                  }
+                  if (provider.trafficData.length < 2) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            provider.isMonitoringActive
+                                ? 'Monitoring active — collecting traffic'
+                                : 'Waiting for live packet capture',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: AppTheme.textSecondary,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  double maxVal = 10.0;
+                  for (var d in provider.trafficData) {
+                    final double val = math.max(
+                        d.pending.toDouble(),
+                        math.max(
+                            d.normal.toDouble(),
+                            math.max(d.suspicious.toDouble(),
+                                d.malicious.toDouble())));
+                    if (val > maxVal) {
+                      maxVal = val;
+                    }
+                  }
+                  final double maxY = maxVal * 1.2;
+                  final double leftInterval =
+                      (maxY / 5).roundToDouble().clamp(1.0, double.infinity);
+
+                  final int dataLength = provider.trafficData.length;
+                  final double maxXVal =
+                      dataLength > 1 ? (dataLength - 1).toDouble() : 1.0;
+
+                  return LineChart(
+                    LineChartData(
+                      gridData: FlGridData(
+                        show: true,
+                        drawVerticalLine: false,
+                        horizontalInterval: leftInterval,
+                        getDrawingHorizontalLine: (value) {
+                          return FlLine(
+                            color: AppTheme.borderPrimary,
+                            strokeWidth: 1,
+                            dashArray: [3, 3],
+                          );
+                        },
+                      ),
+                      titlesData: FlTitlesData(
+                        show: true,
+                        rightTitles: AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                        topTitles: AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 30,
+                            interval: dataLength <= 8 ? 1 : 5,
+                            getTitlesWidget: (value, meta) {
+                              if (value.toInt() >= 0 &&
+                                  value.toInt() < dataLength) {
+                                if (dataLength <= 8 || value.toInt() % 6 == 0) {
+                                  return Padding(
+                                    padding: const EdgeInsets.only(top: 8.0),
+                                    child: Text(
+                                      provider.trafficData[value.toInt()].time,
+                                      style: const TextStyle(
+                                        color: AppTheme.textTertiary,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  );
+                                }
+                              }
+                              return const SizedBox();
+                            },
+                          ),
+                        ),
+                        leftTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 42,
+                            interval: leftInterval,
+                            getTitlesWidget: (value, meta) {
+                              return Text(
+                                value.toInt().toString(),
+                                style: const TextStyle(
+                                  color: AppTheme.textTertiary,
+                                  fontSize: 11,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      lineTouchData: LineTouchData(
+                        touchTooltipData: LineTouchTooltipData(
+                          tooltipBgColor: AppTheme.bgSecondary,
+                          getTooltipItems: (touchedSpots) {
+                            if (touchedSpots.isEmpty) return [];
+
+                            final int index = touchedSpots.first.x.toInt();
+                            final time = index >= 0 &&
+                                    index < provider.trafficData.length
+                                ? provider.trafficData[index].time
+                                : '';
+
+                            return touchedSpots.map((spot) {
+                              final textStyle = TextStyle(
+                                color: spot.bar.color,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              );
+
+                              String label = '';
+                              if (spot.bar.color == AppTheme.success)
+                                label = 'Normal: ';
+                              else if (spot.bar.color == AppTheme.warning)
+                                label = 'Suspicious: ';
+                              else if (spot.bar.color == AppTheme.error)
+                                label = 'Malicious: ';
+                              else if (spot.bar.color == AppTheme.primary)
+                                label = 'Pending: ';
+
+                              if (spot == touchedSpots.first) {
+                                return LineTooltipItem(
+                                  '$time\n',
+                                  const TextStyle(
+                                      color: AppTheme.textPrimary,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12),
+                                  children: [
+                                    TextSpan(
+                                        text: '$label${spot.y.toInt()}',
+                                        style: textStyle),
+                                  ],
+                                );
+                              }
+                              return LineTooltipItem(
+                                  '$label${spot.y.toInt()}', textStyle);
+                            }).toList();
+                          },
+                        ),
+                      ),
+                      borderData: FlBorderData(show: false),
+                      minX: 0,
+                      maxX: maxXVal,
+                      minY: 0,
+                      maxY: maxY,
+                      lineBarsData: [
+                        LineChartBarData(
+                          spots: provider.trafficData
+                              .asMap()
+                              .entries
+                              .map((e) => FlSpot(
+                                    e.key.toDouble(),
+                                    e.value.pending.toDouble(),
+                                  ))
+                              .toList(),
+                          isCurved: false,
+                          color: AppTheme.primary,
+                          barWidth: 2,
+                          isStrokeCapRound: true,
+                          dotData: FlDotData(show: false),
+                          belowBarData: BarAreaData(show: false),
+                        ),
+                        LineChartBarData(
+                          spots: provider.trafficData
+                              .asMap()
+                              .entries
+                              .map((e) => FlSpot(
+                                    e.key.toDouble(),
+                                    e.value.malicious.toDouble(),
+                                  ))
+                              .toList(),
+                          isCurved: false,
+                          color: AppTheme.error,
+                          barWidth: 2,
+                          isStrokeCapRound: true,
+                          dotData: FlDotData(show: false),
+                          belowBarData: BarAreaData(show: false),
+                        ),
+                        LineChartBarData(
+                          spots: provider.trafficData
+                              .asMap()
+                              .entries
+                              .map((e) => FlSpot(
+                                    e.key.toDouble(),
+                                    e.value.suspicious.toDouble(),
+                                  ))
+                              .toList(),
+                          isCurved: false,
+                          color: AppTheme.warning,
+                          barWidth: 2,
+                          isStrokeCapRound: true,
+                          dotData: FlDotData(show: false),
+                          belowBarData: BarAreaData(show: false),
+                        ),
+                        LineChartBarData(
+                          spots: provider.trafficData
+                              .asMap()
+                              .entries
+                              .map((e) => FlSpot(
+                                    e.key.toDouble(),
+                                    e.value.normal.toDouble(),
+                                  ))
+                              .toList(),
+                          isCurved: false,
+                          color: AppTheme.success,
+                          barWidth: 2,
+                          isStrokeCapRound: true,
+                          dotData: FlDotData(show: false),
+                          belowBarData: BarAreaData(show: false),
+                        ),
+                      ],
+                    ),
+                  );
+                }(),
               ),
             ],
           ),
         );
       },
+    );
+  }
+
+  static Widget _buildSessionMetric(String label, String value) {
+    return Container(
+      width: 150,
+      padding: const EdgeInsets.all(AppTheme.spacing16),
+      decoration: BoxDecoration(
+        color: AppTheme.bgPrimary,
+        border: Border.all(color: AppTheme.borderPrimary),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+      ),
+      child: Column(children: [
+        Text(value,
+            style: const TextStyle(
+                color: AppTheme.textPrimary,
+                fontSize: 22,
+                fontWeight: FontWeight.w700)),
+        const SizedBox(height: 4),
+        Text(label,
+            textAlign: TextAlign.center,
+            style:
+                const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+      ]),
     );
   }
 

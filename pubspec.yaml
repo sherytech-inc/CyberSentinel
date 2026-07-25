@@ -28,8 +28,17 @@ dependencies:
   # Utilities
   intl: ^0.19.0
   
+  # Markdown
+  flutter_markdown: ^0.7.4
+  
   # HTTP (for future API integration)
   http: ^1.2.0
+  web_socket_channel: ^3.0.3
+  url_launcher: ^6.3.2
+  uuid: ^4.5.3
+  shared_preferences: ^2.5.5
+  file_picker: ^8.1.2
+  supabase_flutter: ^2.16.0
 
 dev_dependencies:
   flutter_test:

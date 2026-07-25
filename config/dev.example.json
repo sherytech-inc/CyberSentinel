@@ -1,0 +1,8 @@
+{
+  "SUPABASE_URL": "https://YOUR_PROJECT.supabase.co",
+  "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_YOUR_KEY",
+  "API_BASE_URL": "http://127.0.0.1:8000",
+  "DESKTOP_BACKEND_MODE": "managed_source",
+  "DESKTOP_BACKEND_PYTHON": "/Users/YOUR_USERNAME/cybersentinel_api/venv/bin/python",
+  "DESKTOP_BACKEND_WORKDIR": "/Users/YOUR_USERNAME/cybersentinel_api"
+}

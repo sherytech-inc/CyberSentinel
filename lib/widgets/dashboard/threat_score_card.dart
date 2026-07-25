@@ -10,9 +10,15 @@ class ThreatScoreCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Consumer<DashboardProvider>(
-      builder: (context, provider, _) {
-        final score = provider.threatScore;
-        final color = _getColor(score);
+      builder: (context, dashboardProvider, _) {
+        final isMonitoringActive = dashboardProvider.isMonitoringActive;
+        final score = isMonitoringActive
+            ? dashboardProvider.currentSessionThreatScore
+            : dashboardProvider.lastSessionThreatScore;
+        final hasScore = score != null;
+        final displayScore = score ?? 0;
+        final color =
+            hasScore ? _getColor(displayScore) : AppTheme.textTertiary;
 
         return Container(
           padding: const EdgeInsets.all(AppTheme.spacing24),
@@ -28,7 +34,9 @@ class ThreatScoreCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(AppTheme.spacing12),
+                    width: 48,
+                    height: 48,
+                    alignment: Alignment.center,
                     decoration: BoxDecoration(
                       color: color.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(AppTheme.radiusMd),
@@ -36,7 +44,7 @@ class ThreatScoreCard extends StatelessWidget {
                     child: Icon(
                       LucideIcons.shield,
                       color: color,
-                      size: 24,
+                      size: 22,
                     ),
                   ),
                   Text(
@@ -51,18 +59,28 @@ class ThreatScoreCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: AppTheme.spacing16),
-              Text(
-                '$score%',
-                style: const TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textPrimary,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    hasScore
+                        ? '${displayScore.toStringAsFixed(0)} / 100'
+                        : 'N/A',
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: AppTheme.spacing4),
-              const Text(
-                'Threat Score',
-                style: TextStyle(
+              Text(
+                isMonitoringActive
+                    ? 'Threat Score'
+                    : 'Last Session Threat Score',
+                style: const TextStyle(
                   fontSize: 14,
                   color: AppTheme.textSecondary,
                 ),
@@ -76,7 +94,7 @@ class ThreatScoreCard extends StatelessWidget {
                 ),
                 child: FractionallySizedBox(
                   alignment: Alignment.centerLeft,
-                  widthFactor: score / 100,
+                  widthFactor: hasScore ? displayScore / 100 : 0,
                   child: Container(
                     decoration: BoxDecoration(
                       color: color,
@@ -90,18 +108,31 @@ class ThreatScoreCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Critical',
-                    style: TextStyle(
+                    isMonitoringActive
+                        ? (hasScore
+                            ? _getSeverityLabel(displayScore)
+                            : 'Monitoring active — analysis pending')
+                        : 'Monitoring inactive',
+                    style: const TextStyle(
                       fontSize: 12,
                       color: AppTheme.textTertiary,
                     ),
                   ),
-                  Text(
-                    'High Risk Detected',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: color,
-                      fontWeight: FontWeight.w500,
+                  const SizedBox(width: AppTheme.spacing8),
+                  Expanded(
+                    child: Text(
+                      hasScore
+                          ? isMonitoringActive
+                              ? _getRiskDescription(displayScore)
+                              : '${_getRiskDescription(displayScore)} — Last completed session'
+                          : '',
+                      textAlign: TextAlign.right,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: color,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
                 ],
@@ -111,6 +142,18 @@ class ThreatScoreCard extends StatelessWidget {
         );
       },
     );
+  }
+
+  String _getSeverityLabel(int score) {
+    if (score >= 70) return 'Critical';
+    if (score >= 40) return 'Medium';
+    return 'Low';
+  }
+
+  String _getRiskDescription(int score) {
+    if (score >= 70) return 'High Risk Detected';
+    if (score >= 40) return 'Warning Risk Detected';
+    return 'Low Risk';
   }
 
   Color _getColor(int score) {

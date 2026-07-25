@@ -29,7 +29,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     final auth = context.read<AuthProvider>();
     auth.clearError();
     final sent = await auth.sendPasswordReset(_emailController.text.trim());
-    
+
     if (sent && mounted) {
       setState(() {
         _success = true;
@@ -46,7 +46,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(LucideIcons.arrowLeft, color: AppTheme.textSecondary),
+          icon:
+              const Icon(LucideIcons.arrowLeft, color: AppTheme.textSecondary),
           onPressed: () => context.pop(),
         ),
       ),
@@ -100,7 +101,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             style: TextStyle(color: AppTheme.textSecondary),
           ),
           const SizedBox(height: AppTheme.spacing32),
-
           if (auth.error != null)
             Container(
               padding: const EdgeInsets.all(AppTheme.spacing12),
@@ -116,7 +116,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 textAlign: TextAlign.center,
               ),
             ),
-
           TextFormField(
             controller: _emailController,
             decoration: InputDecoration(
@@ -132,10 +131,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               ),
             ),
             keyboardType: TextInputType.emailAddress,
-            validator: (v) => (v == null || v.isEmpty) ? 'Email is required' : null,
+            validator: (v) =>
+                (v == null || v.isEmpty) ? 'Email is required' : null,
           ),
           const SizedBox(height: AppTheme.spacing24),
-
           ElevatedButton(
             onPressed: auth.isLoading ? null : _handleReset,
             style: ElevatedButton.styleFrom(
@@ -148,10 +147,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             ),
             child: auth.isLoading
                 ? const SizedBox(
-                    width: 20, height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white),
                   )
-                : const Text('Send Reset Link', style: TextStyle(fontWeight: FontWeight.bold)),
+                : const Text('Send Reset Link',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -191,7 +193,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             ),
           ),
-          child: const Text('Return to Login', style: TextStyle(fontWeight: FontWeight.bold)),
+          child: const Text('Return to Login',
+              style: TextStyle(fontWeight: FontWeight.bold)),
         ),
       ],
     );

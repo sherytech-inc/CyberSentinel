@@ -1,13 +1,17 @@
-import 'package:cybersentinel/core/api/clients/cloud_control_plane_client.dart';
+import 'package:cybersentinel/core/api/clients/local_agent_client.dart';
 import 'package:flutter/material.dart';
 import 'session_cleanup_coordinator.dart';
 import '../models/intel_model.dart';
-import '../services/api_service.dart';
+
+typedef ThreatIntelRequest = Future<Map<String, dynamic>> Function(String ip);
 
 class ThreatIntelProvider extends ChangeNotifier {
-  ThreatIntelProvider() {
+  ThreatIntelProvider({ThreatIntelRequest? request})
+      : _request = request ?? LocalAgentClient.lookupThreatIntelligence {
     SessionCleanupCoordinator.registerCleanupTask(clear);
   }
+
+  final ThreatIntelRequest _request;
 
   String _searchQuery = '';
   IntelligenceResponse? _intelResponse;
@@ -39,7 +43,8 @@ class ThreatIntelProvider extends ChangeNotifier {
       return;
     }
 
-    final ipv4Regex = RegExp(r'^((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$');
+    final ipv4Regex = RegExp(
+        r'^((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$');
     if (!ipv4Regex.hasMatch(query)) {
       _errorMessage = "'$query' is not a valid IPv4 address.";
       _intelResponse = null;
@@ -48,7 +53,11 @@ class ThreatIntelProvider extends ChangeNotifier {
     }
 
     final privatePrefixes = [
-      '10.', '192.168.', '127.', '169.254.', '0.',
+      '10.',
+      '192.168.',
+      '127.',
+      '169.254.',
+      '0.',
       for (int i = 16; i <= 31; i++) '172.$i.'
     ];
 
@@ -67,7 +76,7 @@ class ThreatIntelProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final result = await CloudControlPlaneClient.analyzeIP(query);
+      final result = await _request(query);
 
       // Stale response protection
       if (currentGen != _lookupGeneration) return;
@@ -77,11 +86,11 @@ class ThreatIntelProvider extends ChangeNotifier {
         // Or 503 which maps to unavailable
         // We handle the parsed IntelligenceResponse if backend returns it
         if (result.containsKey('ip') && result.containsKey('status')) {
-           _intelResponse = IntelligenceResponse.fromJson(result);
-           _errorMessage = null;
+          _intelResponse = IntelligenceResponse.fromJson(result);
+          _errorMessage = null;
         } else {
-           _errorMessage = result['message'] as String? ?? 'Analysis failed';
-           _intelResponse = null;
+          _errorMessage = result['message']?.toString() ?? 'Analysis failed';
+          _intelResponse = null;
         }
       } else {
         _intelResponse = IntelligenceResponse.fromJson(result);
@@ -89,7 +98,7 @@ class ThreatIntelProvider extends ChangeNotifier {
       }
     } catch (e) {
       if (currentGen != _lookupGeneration) return;
-      _errorMessage = e.toString();
+      _errorMessage = 'Threat intelligence is temporarily unavailable.';
       _intelResponse = null;
     }
 
@@ -106,7 +115,11 @@ class ThreatIntelProvider extends ChangeNotifier {
   }
 
   void clear() {
-    // Add specific clear logic here
+    _searchQuery = '';
+    _intelResponse = null;
+    _errorMessage = null;
+    _isLoading = false;
+    _lookupGeneration++;
     notifyListeners();
   }
 }

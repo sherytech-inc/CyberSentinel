@@ -1,56 +1,68 @@
-import 'package:cybersentinel/core/api/clients/cloud_control_plane_client.dart';
 import 'package:flutter/material.dart';
-import 'session_cleanup_coordinator.dart';
 import 'package:uuid/uuid.dart';
+
+import '../core/api/clients/local_agent_client.dart';
 import '../models/chat_message.dart';
-import '../services/api_service.dart';
+import 'session_cleanup_coordinator.dart';
+
+typedef CopilotSender = Future<Map<String, dynamic>> Function(
+    String sessionId, String message);
 
 class ChatbotProvider extends ChangeNotifier {
-  ChatbotProvider() {
+  ChatbotProvider({CopilotSender? sender})
+      : _sender = sender ?? LocalAgentClient.sendCopilotMessage {
     SessionCleanupCoordinator.registerCleanupTask(clear);
   }
 
-  final String _sessionId = const Uuid().v4();
+  static const _safeUnavailable =
+      'AI Analyst is temporarily unavailable. Packet capture and threat monitoring are still running.';
+  final CopilotSender _sender;
+  String _sessionId = const Uuid().v4();
+  String get sessionId => _sessionId;
 
-  List<ChatMessage> _messages = [];
-  List<ChatMessage> get messages => _messages;
+  final List<ChatMessage> _messages = [];
+  List<ChatMessage> get messages => List.unmodifiable(_messages);
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
-  List<String> _suggestedQuestions = [
-    "What are the top threats right now?",
-    "Summarize recent firewall blocks.",
-    "Analyze the IP address 185.220.101.42.",
-    "Show me the latest packet tracing activity."
+  final List<String> _suggestedQuestions = const [
+    'Summarize the current capture session.',
+    'Is monitoring currently active?',
+    'How many packets were captured and analyzed?',
+    'Why is analysis still pending?',
+    'Explain the latest analyzed flow.',
+    'Are there any suspicious IPs?',
+    'Which models contributed to the latest result?',
+    'What action should I take?',
   ];
   List<String> get suggestedQuestions => _suggestedQuestions;
 
   Future<void> sendMessage(String text) async {
-    if (text.trim().isEmpty) return;
+    final message = text.trim();
+    if (message.isEmpty || _isLoading) return;
 
-    final userMessage = ChatMessage(
+    _messages.add(ChatMessage(
       id: const Uuid().v4(),
-      text: text,
+      text: message,
       sender: MessageSender.user,
       timestamp: DateTime.now(),
-    );
-
-    _messages.add(userMessage);
+    ));
     _isLoading = true;
     notifyListeners();
 
     try {
-      final response = await CloudControlPlaneClient.sendChatMessage(_sessionId, text);
-
-      if (response['error'] == true) {
-        _addBotMessage("Sorry, an error occurred: ${response['message']}");
+      final result = await _sender(_sessionId, message);
+      final response = result['response'];
+      if (response is String && response.trim().isNotEmpty) {
+        _addBotMessage(response.trim());
+      } else if (result['error'] == true) {
+        _addBotMessage(_safeUnavailable);
       } else {
-        final botText = response['response'] ?? "I didn't understand that.";
-        _addBotMessage(botText);
+        _addBotMessage(_safeUnavailable);
       }
-    } catch (e) {
-      _addBotMessage("Sorry, an error occurred: $e");
+    } catch (_) {
+      _addBotMessage(_safeUnavailable);
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -58,17 +70,18 @@ class ChatbotProvider extends ChangeNotifier {
   }
 
   void _addBotMessage(String text) {
-    final botMessage = ChatMessage(
+    _messages.add(ChatMessage(
       id: const Uuid().v4(),
       text: text,
       sender: MessageSender.bot,
       timestamp: DateTime.now(),
-    );
-    _messages.add(botMessage);
+    ));
   }
 
   void clear() {
-    // Add specific clear logic here
+    _messages.clear();
+    _isLoading = false;
+    _sessionId = const Uuid().v4();
     notifyListeners();
   }
 }

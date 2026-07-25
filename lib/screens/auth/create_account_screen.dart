@@ -29,18 +29,21 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
 
   Future<void> _handleEmailSignUp() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     final auth = context.read<AuthProvider>();
     auth.clearError();
     final success = await auth.signUp(
       _emailController.text.trim(),
       _passwordController.text,
-      displayName: _nameController.text.trim().isNotEmpty ? _nameController.text.trim() : null,
+      displayName: _nameController.text.trim().isNotEmpty
+          ? _nameController.text.trim()
+          : null,
     );
     if (success) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Account created successfully! Please sign in.')),
+          const SnackBar(
+              content: Text('Account created successfully! Please sign in.')),
         );
         context.pop();
       }
@@ -92,7 +95,8 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                         ),
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: const Icon(LucideIcons.shield, color: Colors.white, size: 36),
+                      child: const Icon(LucideIcons.shield,
+                          color: Colors.white, size: 36),
                     ),
                   ),
                   const SizedBox(height: AppTheme.spacing24),
@@ -115,7 +119,6 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                     ),
                   ),
                   const SizedBox(height: AppTheme.spacing32),
-                  
                   if (auth.error != null)
                     Container(
                       padding: const EdgeInsets.all(AppTheme.spacing12),
@@ -123,15 +126,16 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                       decoration: BoxDecoration(
                         color: AppTheme.error.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                        border: Border.all(color: AppTheme.error.withOpacity(0.5)),
+                        border:
+                            Border.all(color: AppTheme.error.withOpacity(0.5)),
                       ),
                       child: Text(
                         auth.error!,
-                        style: const TextStyle(color: AppTheme.error, fontSize: 13),
+                        style: const TextStyle(
+                            color: AppTheme.error, fontSize: 13),
                         textAlign: TextAlign.center,
                       ),
                     ),
-
                   TextFormField(
                     controller: _nameController,
                     decoration: InputDecoration(
@@ -139,17 +143,18 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                       prefixIcon: const Icon(LucideIcons.user, size: 18),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                        borderSide: const BorderSide(color: AppTheme.borderPrimary),
+                        borderSide:
+                            const BorderSide(color: AppTheme.borderPrimary),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                        borderSide: const BorderSide(color: AppTheme.borderPrimary),
+                        borderSide:
+                            const BorderSide(color: AppTheme.borderPrimary),
                       ),
                     ),
                     keyboardType: TextInputType.name,
                   ),
                   const SizedBox(height: AppTheme.spacing16),
-
                   TextFormField(
                     controller: _emailController,
                     decoration: InputDecoration(
@@ -157,18 +162,20 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                       prefixIcon: const Icon(LucideIcons.mail, size: 18),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                        borderSide: const BorderSide(color: AppTheme.borderPrimary),
+                        borderSide:
+                            const BorderSide(color: AppTheme.borderPrimary),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                        borderSide: const BorderSide(color: AppTheme.borderPrimary),
+                        borderSide:
+                            const BorderSide(color: AppTheme.borderPrimary),
                       ),
                     ),
                     keyboardType: TextInputType.emailAddress,
-                    validator: (v) => (v == null || v.isEmpty) ? 'Email is required' : null,
+                    validator: (v) =>
+                        (v == null || v.isEmpty) ? 'Email is required' : null,
                   ),
                   const SizedBox(height: AppTheme.spacing16),
-                  
                   TextFormField(
                     controller: _passwordController,
                     decoration: InputDecoration(
@@ -176,68 +183,83 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                       prefixIcon: const Icon(LucideIcons.lock, size: 18),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                        borderSide: const BorderSide(color: AppTheme.borderPrimary),
+                        borderSide:
+                            const BorderSide(color: AppTheme.borderPrimary),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                        borderSide: const BorderSide(color: AppTheme.borderPrimary),
+                        borderSide:
+                            const BorderSide(color: AppTheme.borderPrimary),
                       ),
                     ),
                     obscureText: true,
-                    validator: (v) => (v == null || v.isEmpty || v.length < 6) ? 'Password must be at least 6 characters' : null,
+                    validator: (v) => (v == null || v.isEmpty || v.length < 6)
+                        ? 'Password must be at least 6 characters'
+                        : null,
                   ),
                   const SizedBox(height: AppTheme.spacing24),
-
                   ElevatedButton(
                     onPressed: auth.isLoading ? null : _handleEmailSignUp,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primary,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: AppTheme.spacing16),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: AppTheme.spacing16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                       ),
                     ),
                     child: auth.isLoading
                         ? const SizedBox(
-                            width: 20, height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white),
                           )
-                        : const Text('Create Account', style: TextStyle(fontWeight: FontWeight.bold)),
+                        : const Text('Create Account',
+                            style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
-                  
                   if (AppEnvironment.enableGoogleAuth) ...[
                     const SizedBox(height: AppTheme.spacing24),
                     Row(
                       children: [
-                        const Expanded(child: Divider(color: AppTheme.borderPrimary)),
+                        const Expanded(
+                            child: Divider(color: AppTheme.borderPrimary)),
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacing16),
-                          child: Text('OR', style: TextStyle(color: AppTheme.textTertiary, fontSize: 12)),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: AppTheme.spacing16),
+                          child: Text('OR',
+                              style: TextStyle(
+                                  color: AppTheme.textTertiary, fontSize: 12)),
                         ),
-                        const Expanded(child: Divider(color: AppTheme.borderPrimary)),
+                        const Expanded(
+                            child: Divider(color: AppTheme.borderPrimary)),
                       ],
                     ),
                     const SizedBox(height: AppTheme.spacing24),
-                    
                     OutlinedButton.icon(
                       onPressed: auth.isLoading ? null : _handleGoogleSignIn,
-                      icon: const Icon(LucideIcons.chrome, size: 18), // fallback for Google icon
+                      icon: const Icon(LucideIcons.chrome,
+                          size: 18), // fallback for Google icon
                       label: const Text('Continue with Google'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppTheme.textPrimary,
-                        padding: const EdgeInsets.symmetric(vertical: AppTheme.spacing16),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: AppTheme.spacing16),
                         side: const BorderSide(color: AppTheme.borderPrimary),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                          borderRadius:
+                              BorderRadius.circular(AppTheme.radiusMd),
                         ),
                       ),
                     ),
                   ],
-
                   const SizedBox(height: AppTheme.spacing16),
                   TextButton(
-                    onPressed: () => context.pop(),
+                    onPressed: () {
+                      context.read<AuthProvider>().clearError();
+                      context.pop();
+                    },
                     style: TextButton.styleFrom(
                       foregroundColor: AppTheme.textSecondary,
                     ),

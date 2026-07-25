@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'session_cleanup_coordinator.dart';
 import '../models/firewall_action_model.dart';
-import '../services/api_service.dart';
 
 class FirewallActionsProvider extends ChangeNotifier {
   List<FirewallActionModel> _actions = [];
@@ -15,10 +14,13 @@ class FirewallActionsProvider extends ChangeNotifier {
   String? _error;
   String? get error => _error;
 
-  int get blockCount => _actions.where((a) => a.action.toUpperCase() == 'BLOCK').length;
-  int get unblockCount => _actions.where((a) => a.action.toUpperCase() == 'UNBLOCK').length;
+  int get blockCount =>
+      _actions.where((a) => a.action.toUpperCase() == 'BLOCK').length;
+  int get unblockCount =>
+      _actions.where((a) => a.action.toUpperCase() == 'UNBLOCK').length;
   int get enforcedCount => _actions.where((a) => a.enforced).length;
-  int get recordedCount => _actions.where((a) => a.recorded && !a.enforced).length;
+  int get recordedCount =>
+      _actions.where((a) => a.recorded && !a.enforced).length;
 
   int _currentPage = 1;
   final int _pageSize = 50;
@@ -50,7 +52,7 @@ class FirewallActionsProvider extends ChangeNotifier {
 
   Future<void> fetchActions({bool refresh = false}) async {
     if (_isLoading) return;
-    
+
     if (refresh) {
       _currentPage = 1;
       _hasMore = true;

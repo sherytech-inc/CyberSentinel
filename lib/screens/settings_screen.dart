@@ -37,7 +37,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const SizedBox(height: 24),
               _buildAlertsSection(),
               const SizedBox(height: 24),
-
               _buildThemeSection(context),
               const SizedBox(height: 24),
               _buildSaveButton(context),
@@ -66,25 +65,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: const BoxDecoration(
-                  border: Border(bottom: BorderSide(color: AppTheme.borderPrimary)),
+                  border:
+                      Border(bottom: BorderSide(color: AppTheme.borderPrimary)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: const [
                     Row(
                       children: [
-                        Icon(LucideIcons.globe, color: AppTheme.primary, size: 20),
+                        Icon(LucideIcons.globe,
+                            color: AppTheme.primary, size: 20),
                         SizedBox(width: 8),
                         Text(
                           'Monitoring',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.w600),
                         ),
                       ],
                     ),
                     SizedBox(height: 4),
                     Text(
                       'Configure automatic data refresh intervals',
-                      style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+                      style: TextStyle(
+                          fontSize: 14, color: AppTheme.textSecondary),
                     ),
                   ],
                 ),
@@ -106,12 +109,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           children: const [
                             Text(
                               'Data Refresh Interval',
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                              style: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.w500),
                             ),
                             SizedBox(height: 4),
                             Text(
                               'How often to fetch new threat data',
-                              style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+                              style: TextStyle(
+                                  fontSize: 14, color: AppTheme.textSecondary),
                             ),
                           ],
                         ),
@@ -120,13 +125,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         value: provider.refreshInterval,
                         underline: const SizedBox(),
                         dropdownColor: AppTheme.bgSecondary,
-                        style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
+                        style: const TextStyle(
+                            color: AppTheme.textPrimary, fontSize: 14),
                         onChanged: (RefreshInterval? newValue) {
                           if (newValue != null) {
                             provider.setRefreshInterval(newValue);
                           }
                         },
-                        items: RefreshInterval.values.map((RefreshInterval interval) {
+                        items: RefreshInterval.values
+                            .map((RefreshInterval interval) {
                           return DropdownMenuItem<RefreshInterval>(
                             value: interval,
                             child: Text(interval.label),
@@ -161,7 +168,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: const BoxDecoration(
-                  border: Border(bottom: BorderSide(color: AppTheme.borderPrimary)),
+                  border:
+                      Border(bottom: BorderSide(color: AppTheme.borderPrimary)),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -171,18 +179,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       children: const [
                         Row(
                           children: [
-                            Icon(LucideIcons.plug, color: AppTheme.primary, size: 20),
+                            Icon(LucideIcons.plug,
+                                color: AppTheme.primary, size: 20),
                             SizedBox(width: 8),
                             Text(
                               'Integrations',
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                              style: TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.w600),
                             ),
                           ],
                         ),
                         SizedBox(height: 4),
                         Text(
                           'Third-party security intelligence providers (Backend Only)',
-                          style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+                          style: TextStyle(
+                              fontSize: 14, color: AppTheme.textSecondary),
                         ),
                       ],
                     ),
@@ -194,7 +205,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       )
                     else
                       IconButton(
-                        icon: const Icon(LucideIcons.refreshCw, size: 20, color: AppTheme.textSecondary),
+                        icon: const Icon(LucideIcons.refreshCw,
+                            size: 20, color: AppTheme.textSecondary),
                         onPressed: () => provider.fetchIntegrations(),
                         tooltip: 'Refresh Status',
                       ),
@@ -255,7 +267,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     IntegrationStatus status,
   ) {
     final isTesting = provider.isTesting(providerId);
-    
+
     Color statusColor;
     IconData statusIcon;
     switch (status.state) {
@@ -292,11 +304,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w500),
                   ),
                   const SizedBox(width: 12),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: statusColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
@@ -321,12 +335,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
               OutlinedButton(
-                onPressed: (isTesting || !status.configured) ? null : () => provider.testConnection(providerId),
+                onPressed: (isTesting || !status.configured)
+                    ? null
+                    : () => provider.testConnection(providerId),
                 style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   side: BorderSide(
-                    color: (isTesting || !status.configured) 
-                        ? AppTheme.borderSecondary 
+                    color: (isTesting || !status.configured)
+                        ? AppTheme.borderSecondary
                         : AppTheme.primary,
                   ),
                 ),
@@ -349,11 +366,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 8),
             Row(
               children: [
-                const Icon(LucideIcons.key, size: 14, color: AppTheme.textTertiary),
+                const Icon(LucideIcons.key,
+                    size: 14, color: AppTheme.textTertiary),
                 const SizedBox(width: 6),
                 Text(
                   'Key: ${status.maskedHint}',
-                  style: const TextStyle(fontSize: 12, color: AppTheme.textTertiary, fontFamily: 'monospace'),
+                  style: const TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textTertiary,
+                      fontFamily: 'monospace'),
                 ),
               ],
             ),
@@ -389,7 +410,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     SizedBox(width: 8),
                     Text(
                       'Notifications',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                     ),
                   ],
                 ),
@@ -412,12 +434,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               child: Row(
                 children: const [
-                  Icon(LucideIcons.info, color: AppTheme.textSecondary, size: 18),
+                  Icon(LucideIcons.info,
+                      color: AppTheme.textSecondary, size: 18),
                   SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       'Email and push notifications are not available in this build.',
-                      style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+                      style: TextStyle(
+                          color: AppTheme.textSecondary, fontSize: 14),
                     ),
                   ),
                 ],
@@ -428,7 +452,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
-
 
   // ── Theme ──────────────────────────────────────────────────────────────────
 
@@ -447,25 +470,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: const BoxDecoration(
-                  border: Border(bottom: BorderSide(color: AppTheme.borderPrimary)),
+                  border:
+                      Border(bottom: BorderSide(color: AppTheme.borderPrimary)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: const [
                     Row(
                       children: [
-                        Icon(LucideIcons.moon, color: AppTheme.primary, size: 20),
+                        Icon(LucideIcons.moon,
+                            color: AppTheme.primary, size: 20),
                         SizedBox(width: 8),
                         Text(
                           'Appearance',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.w600),
                         ),
                       ],
                     ),
                     SizedBox(height: 4),
                     Text(
                       'Customize the application theme',
-                      style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+                      style: TextStyle(
+                          fontSize: 14, color: AppTheme.textSecondary),
                     ),
                   ],
                 ),
@@ -487,7 +514,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       child: _buildThemeOption(
                         'Dark',
                         LucideIcons.moon,
-                        provider.themeMode == ThemeMode.dark || provider.themeMode == ThemeMode.system,
+                        provider.themeMode == ThemeMode.dark ||
+                            provider.themeMode == ThemeMode.system,
                         () => provider.setThemeMode(ThemeMode.dark),
                       ),
                     ),
@@ -566,7 +594,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Future<void> _handleSave(BuildContext context, SettingsProvider provider) async {
+  Future<void> _handleSave(
+      BuildContext context, SettingsProvider provider) async {
     final success = await provider.saveSettings();
 
     if (!context.mounted) return;

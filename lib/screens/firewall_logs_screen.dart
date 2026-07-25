@@ -10,7 +10,6 @@ import '../providers/firewall_logs_provider.dart';
 import '../providers/firewall_actions_provider.dart';
 import '../models/firewall_log.dart';
 import '../models/firewall_action_model.dart';
-import '../services/api_service.dart';
 
 class FirewallLogsScreen extends StatefulWidget {
   const FirewallLogsScreen({super.key});
@@ -28,10 +27,15 @@ class _FirewallLogsScreenState extends State<FirewallLogsScreen> {
       builder: (context, logsProvider, actionsProvider, _) {
         return NotificationListener<ScrollNotification>(
           onNotification: (ScrollNotification scrollInfo) {
-            if (scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 50) {
-              if (_selectedTab == 0 && logsProvider.hasMore && !logsProvider.isLoading) {
+            if (scrollInfo.metrics.pixels >=
+                scrollInfo.metrics.maxScrollExtent - 50) {
+              if (_selectedTab == 0 &&
+                  logsProvider.hasMore &&
+                  !logsProvider.isLoading) {
                 logsProvider.fetchLogs();
-              } else if (_selectedTab == 1 && actionsProvider.hasMore && !actionsProvider.isLoading) {
+              } else if (_selectedTab == 1 &&
+                  actionsProvider.hasMore &&
+                  !actionsProvider.isLoading) {
                 actionsProvider.fetchActions();
               }
             }
@@ -53,7 +57,8 @@ class _FirewallLogsScreenState extends State<FirewallLogsScreen> {
 
   // ── Top Bar ────────────────────────────────────────────────────────────────
 
-  Widget _buildTopBar(BuildContext context, FirewallLogsProvider logsProvider, FirewallActionsProvider actionsProvider) {
+  Widget _buildTopBar(BuildContext context, FirewallLogsProvider logsProvider,
+      FirewallActionsProvider actionsProvider) {
     return Container(
       padding: const EdgeInsets.all(AppTheme.spacing24),
       decoration: BoxDecoration(
@@ -118,7 +123,8 @@ class _FirewallLogsScreenState extends State<FirewallLogsScreen> {
 
   // ── Handlers ───────────────────────────────────────────────────────────────
 
-  void _handleUploadLogs(BuildContext context, FirewallLogsProvider provider) async {
+  void _handleUploadLogs(
+      BuildContext context, FirewallLogsProvider provider) async {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
@@ -147,35 +153,39 @@ class _FirewallLogsScreenState extends State<FirewallLogsScreen> {
           showDialog(
             context: context,
             barrierDismissible: false,
-            builder: (context) => const Center(child: CircularProgressIndicator()),
+            builder: (context) =>
+                const Center(child: CircularProgressIndicator()),
           );
         }
 
-        final uploadResult = await LocalAgentClient.uploadFirewallLogs(name, bytes);
+        final uploadResult =
+            await LocalAgentClient.uploadFirewallLogs(name, bytes);
 
         if (context.mounted) {
           Navigator.pop(context); // close dialog
-          if (uploadResult.containsKey('error') && uploadResult['error'] == true) {
-             ScaffoldMessenger.of(context).showSnackBar(
-               SnackBar(
-                 content: Text('Upload failed: ${uploadResult['message']}'),
-                 backgroundColor: AppTheme.error,
-               ),
-             );
+          if (uploadResult.containsKey('error') &&
+              uploadResult['error'] == true) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Upload failed: ${uploadResult['message']}'),
+                backgroundColor: AppTheme.error,
+              ),
+            );
           } else {
-             // Authoritative refresh
-             provider.fetchLogs();
-             
-             final imported = uploadResult['imported'] ?? 0;
-             final rejected = uploadResult['rejected'] ?? 0;
-             final format = uploadResult['format'] ?? 'unknown';
-             
-             ScaffoldMessenger.of(context).showSnackBar(
-               SnackBar(
-                 content: Text('Success: Imported $imported entries ($format). Rejected: $rejected.'),
-                 backgroundColor: AppTheme.success,
-               ),
-             );
+            // Authoritative refresh
+            provider.fetchLogs();
+
+            final imported = uploadResult['imported'] ?? 0;
+            final rejected = uploadResult['rejected'] ?? 0;
+            final format = uploadResult['format'] ?? 'unknown';
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                    'Success: Imported $imported entries ($format). Rejected: $rejected.'),
+                backgroundColor: AppTheme.success,
+              ),
+            );
           }
         }
       }
@@ -226,7 +236,9 @@ class _FirewallLogsScreenState extends State<FirewallLogsScreen> {
   // ── Main Content ───────────────────────────────────────────────────────────
 
   Widget _buildMainContent(
-      BuildContext context, FirewallLogsProvider logsProvider, FirewallActionsProvider actionsProvider) {
+      BuildContext context,
+      FirewallLogsProvider logsProvider,
+      FirewallActionsProvider actionsProvider) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -285,7 +297,9 @@ class _FirewallLogsScreenState extends State<FirewallLogsScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? AppTheme.primary.withOpacity(0.1) : Colors.transparent,
+          color: isSelected
+              ? AppTheme.primary.withOpacity(0.1)
+              : Colors.transparent,
           border: Border.all(
             color: isSelected ? AppTheme.primary : AppTheme.borderPrimary,
           ),
@@ -322,11 +336,15 @@ class _FirewallLogsScreenState extends State<FirewallLogsScreen> {
         ],
         rows: provider.logs.map((log) {
           return DataRow(cells: [
-            DataCell(Text(log.sourceIp, style: const TextStyle(fontFamily: 'monospace'))),
+            DataCell(Text(log.sourceIp,
+                style: const TextStyle(fontFamily: 'monospace'))),
             DataCell(Text(log.destinationPort?.toString() ?? 'Unavailable')),
-            DataCell(_buildActionBadge(log.action.name, log.action == FirewallAction.blocked)),
-            DataCell(Text(log.ruleName ?? 'Unavailable', style: const TextStyle(fontFamily: 'monospace'))),
-            DataCell(Text(log.loggedAt.toString(), style: const TextStyle(fontFamily: 'monospace'))),
+            DataCell(_buildActionBadge(
+                log.action.name, log.action == FirewallAction.blocked)),
+            DataCell(Text(log.ruleName ?? 'Unavailable',
+                style: const TextStyle(fontFamily: 'monospace'))),
+            DataCell(Text(log.loggedAt.toString(),
+                style: const TextStyle(fontFamily: 'monospace'))),
           ]);
         }).toList(),
       ),
@@ -354,12 +372,15 @@ class _FirewallLogsScreenState extends State<FirewallLogsScreen> {
         ],
         rows: provider.actions.map((action) {
           return DataRow(cells: [
-            DataCell(Text(action.ip, style: const TextStyle(fontFamily: 'monospace'))),
-            DataCell(_buildActionBadge(action.action, action.action.toUpperCase() == 'BLOCK')),
+            DataCell(Text(action.ip,
+                style: const TextStyle(fontFamily: 'monospace'))),
+            DataCell(_buildActionBadge(
+                action.action, action.action.toUpperCase() == 'BLOCK')),
             DataCell(Text(action.reason ?? 'N/A')),
             DataCell(Text(action.source)),
             DataCell(_buildEnforcementBadge(action.recorded, action.enforced)),
-            DataCell(Text(action.createdAt.toString(), style: const TextStyle(fontFamily: 'monospace'))),
+            DataCell(Text(action.createdAt.toString(),
+                style: const TextStyle(fontFamily: 'monospace'))),
           ]);
         }).toList(),
       ),
@@ -389,7 +410,8 @@ class _FirewallLogsScreenState extends State<FirewallLogsScreen> {
       ),
       child: Text(
         label,
-        style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.bold),
+        style:
+            TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -416,18 +438,26 @@ class _FirewallLogsScreenState extends State<FirewallLogsScreen> {
       child: Center(
         child: Column(
           children: [
-            const Icon(LucideIcons.shieldCheck, size: 48, color: AppTheme.success),
+            const Icon(LucideIcons.shieldCheck,
+                size: 48, color: AppTheme.success),
             const SizedBox(height: 16),
-            Text(message, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+            Text(message,
+                style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimary)),
             const SizedBox(height: 8),
-            Text(subtitle, style: const TextStyle(color: AppTheme.textSecondary), textAlign: TextAlign.center),
+            Text(subtitle,
+                style: const TextStyle(color: AppTheme.textSecondary),
+                textAlign: TextAlign.center),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildInsightsPanel(FirewallLogsProvider logsProvider, FirewallActionsProvider actionsProvider) {
+  Widget _buildInsightsPanel(FirewallLogsProvider logsProvider,
+      FirewallActionsProvider actionsProvider) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -440,12 +470,16 @@ class _FirewallLogsScreenState extends State<FirewallLogsScreen> {
         children: [
           Row(
             children: [
-              const Icon(LucideIcons.chartBar, color: AppTheme.primary, size: 20),
+              const Icon(LucideIcons.chartBar,
+                  color: AppTheme.primary, size: 20),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  _selectedTab == 0 ? 'OS Firewall Insights' : 'SOC Actions Insights',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  _selectedTab == 0
+                      ? 'OS Firewall Insights'
+                      : 'SOC Actions Insights',
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.w600),
                 ),
               ),
             ],
@@ -482,7 +516,8 @@ class _FirewallLogsScreenState extends State<FirewallLogsScreen> {
             const SizedBox(height: 24),
             const Text(
               'Enforcement Status',
-              style: TextStyle(fontWeight: FontWeight.w600, color: AppTheme.textSecondary),
+              style: TextStyle(
+                  fontWeight: FontWeight.w600, color: AppTheme.textSecondary),
             ),
             const SizedBox(height: 12),
             _buildStatBar(

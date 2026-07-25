@@ -28,7 +28,8 @@ class ResponseAction {
       action: json['action'] as String? ?? '',
       reason: json['reason'] as String?,
       source: json['source'] as String? ?? 'USER',
-      createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ?? DateTime.now(),
+      createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ??
+          DateTime.now(),
       analystName: json['analyst_name'] as String?,
       enforced: json['enforced'] as bool?,
       note: json['note'] as String?,

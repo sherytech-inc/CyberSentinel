@@ -6,6 +6,7 @@ import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'providers/auth_provider.dart';
 import 'providers/settings_provider.dart';
+
 class CyberSentinelApp extends StatefulWidget {
   const CyberSentinelApp({super.key});
 
@@ -27,12 +28,13 @@ class _CyberSentinelAppState extends State<CyberSentinelApp> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
-    
+
     if (auth.isLoading && !auth.isAuthenticated) {
       // Initial loading splash before auth state is fully loaded
       return MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: ThemeData.dark().copyWith(scaffoldBackgroundColor: AppTheme.bgPrimary),
+        theme: ThemeData.dark()
+            .copyWith(scaffoldBackgroundColor: AppTheme.bgPrimary),
         home: const Scaffold(
           body: Center(
             child: CircularProgressIndicator(color: AppTheme.primary),

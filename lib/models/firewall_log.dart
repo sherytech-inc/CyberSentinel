@@ -19,7 +19,9 @@ class FirewallLog {
 
   /// Construct a FirewallLog from the backend JSON response.
   factory FirewallLog.fromJson(Map<String, dynamic> json) {
-    if (!json.containsKey('source_ip') || json['source_ip'] == null || json['source_ip'] == '') {
+    if (!json.containsKey('source_ip') ||
+        json['source_ip'] == null ||
+        json['source_ip'] == '') {
       throw FormatException('Missing or empty source_ip in FirewallLog');
     }
 

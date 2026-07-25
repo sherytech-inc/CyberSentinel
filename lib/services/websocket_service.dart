@@ -4,8 +4,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:cybersentinel/core/sidecar/sidecar_manager.dart';
-import 'api_service.dart';
+import 'package:cybersentinel/core/sidecar/sidecar_manager_interface.dart';
 
 enum WebSocketState {
   disconnected,
@@ -28,23 +27,41 @@ class WebSocketService {
   bool get isConnected => _state == WebSocketState.connected;
 
   // Stream controllers for different event types
-  final _initialStateController = StreamController<Map<String, dynamic>>.broadcast();
-  final _packetBatchController = StreamController<Map<String, dynamic>>.broadcast();
-  final _newThreatController = StreamController<Map<String, dynamic>>.broadcast();
-  final _alertUpdatedController = StreamController<Map<String, dynamic>>.broadcast();
-  final _alertResolvedController = StreamController<Map<String, dynamic>>.broadcast();
-  final _statsUpdateController = StreamController<Map<String, dynamic>>.broadcast();
+  final _initialStateController =
+      StreamController<Map<String, dynamic>>.broadcast();
+  final _packetBatchController =
+      StreamController<Map<String, dynamic>>.broadcast();
+  final _packetAnalysisUpdateController =
+      StreamController<Map<String, dynamic>>.broadcast();
+  final _newThreatController =
+      StreamController<Map<String, dynamic>>.broadcast();
+  final _alertUpdatedController =
+      StreamController<Map<String, dynamic>>.broadcast();
+  final _alertResolvedController =
+      StreamController<Map<String, dynamic>>.broadcast();
+  final _statsUpdateController =
+      StreamController<Map<String, dynamic>>.broadcast();
 
   // Connection state updates
-  final _connectionStateController = StreamController<WebSocketState>.broadcast();
+  final _connectionStateController =
+      StreamController<WebSocketState>.broadcast();
 
-  Stream<Map<String, dynamic>> get initialStateStream => _initialStateController.stream;
-  Stream<Map<String, dynamic>> get packetBatchStream => _packetBatchController.stream;
-  Stream<Map<String, dynamic>> get newThreatStream => _newThreatController.stream;
-  Stream<Map<String, dynamic>> get alertUpdatedStream => _alertUpdatedController.stream;
-  Stream<Map<String, dynamic>> get alertResolvedStream => _alertResolvedController.stream;
-  Stream<Map<String, dynamic>> get statsUpdateStream => _statsUpdateController.stream;
-  Stream<WebSocketState> get connectionStateStream => _connectionStateController.stream;
+  Stream<Map<String, dynamic>> get initialStateStream =>
+      _initialStateController.stream;
+  Stream<Map<String, dynamic>> get packetBatchStream =>
+      _packetBatchController.stream;
+  Stream<Map<String, dynamic>> get packetAnalysisUpdateStream =>
+      _packetAnalysisUpdateController.stream;
+  Stream<Map<String, dynamic>> get newThreatStream =>
+      _newThreatController.stream;
+  Stream<Map<String, dynamic>> get alertUpdatedStream =>
+      _alertUpdatedController.stream;
+  Stream<Map<String, dynamic>> get alertResolvedStream =>
+      _alertResolvedController.stream;
+  Stream<Map<String, dynamic>> get statsUpdateStream =>
+      _statsUpdateController.stream;
+  Stream<WebSocketState> get connectionStateStream =>
+      _connectionStateController.stream;
 
   Timer? _reconnectTimer;
   int _reconnectAttempts = 0;
@@ -76,6 +93,16 @@ class WebSocketService {
     if (kDebugMode) {
       print('Establishing unified WebSocket connection to $wsUrl');
     }
+
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session == null) {
+      if (kDebugMode) {
+        print('Skipping WebSocket connection until an auth session exists');
+      }
+      _setState(WebSocketState.disconnected);
+      return;
+    }
+
     _establishConnection(wsUrl);
   }
 
@@ -84,7 +111,7 @@ class WebSocketService {
       final uri = Uri.parse(url);
       final channel = WebSocketChannel.connect(uri);
       await channel.ready.timeout(const Duration(seconds: 5));
-      
+
       _channel = channel;
       _reconnectAttempts = 0;
       _setState(WebSocketState.authenticating);
@@ -99,7 +126,9 @@ class WebSocketService {
         final session = Supabase.instance.client.auth.currentSession;
         accessToken = session?.accessToken;
       } catch (e) {
-        if (kDebugMode) print('Supabase not initialized or accessible (likely test environment)');
+        if (kDebugMode)
+          print(
+              'Supabase not initialized or accessible (likely test environment)');
       }
 
       if (accessToken == null || accessToken.isEmpty) {
@@ -112,7 +141,7 @@ class WebSocketService {
         'type': 'auth',
         'token': accessToken,
       };
-      
+
       final localToken = SidecarManager().localToken;
       if (localToken != null) {
         payload['local_token'] = localToken;
@@ -132,10 +161,13 @@ class WebSocketService {
         },
         onDone: () {
           if (kDebugMode) {
-            print('WebSocket connection closed by server. Code: ${channel.closeCode}');
+            print(
+                'WebSocket connection closed by server. Code: ${channel.closeCode}');
           }
           // Some backend implementations might send specific close codes for unauthorized (e.g. 4001, 4003)
-          final bool isUnauthorized = channel.closeCode == 4001 || channel.closeCode == 4003 || channel.closeCode == 1008;
+          final bool isUnauthorized = channel.closeCode == 4001 ||
+              channel.closeCode == 4003 ||
+              channel.closeCode == 1008;
           _handleDisconnect(url, unauthorized: isUnauthorized);
         },
       );
@@ -150,11 +182,13 @@ class WebSocketService {
   void _handleMessage(String data) {
     try {
       final envelope = jsonDecode(data) as Map<String, dynamic>;
-      final eventType = envelope['type'] as String? ?? envelope['event_type'] as String?;
+      final eventType =
+          envelope['type'] as String? ?? envelope['event_type'] as String?;
       final payload = envelope['payload'] as Map<String, dynamic>? ?? {};
 
       if (eventType == 'auth_ack') {
-        final bool authenticated = envelope['authenticated'] == true || envelope['status'] == 'success';
+        final bool authenticated = envelope['authenticated'] == true ||
+            envelope['status'] == 'success';
         if (authenticated) {
           _setState(WebSocketState.connected);
           if (kDebugMode) print('WebSocket authenticated successfully');
@@ -180,6 +214,9 @@ class WebSocketService {
           break;
         case 'packet_batch':
           _packetBatchController.add(payload);
+          break;
+        case 'packet_analysis_update':
+          _packetAnalysisUpdateController.add(payload);
           break;
         case 'new_threat':
           _newThreatController.add(payload);
@@ -212,7 +249,9 @@ class WebSocketService {
 
     if (unauthorized || !_shouldReconnect) {
       _shouldReconnect = false;
-      _setState(unauthorized ? WebSocketState.unauthorized : WebSocketState.disconnected);
+      _setState(unauthorized
+          ? WebSocketState.unauthorized
+          : WebSocketState.disconnected);
       return;
     }
 
@@ -223,7 +262,8 @@ class WebSocketService {
     _reconnectAttempts++;
 
     if (kDebugMode) {
-      print('WebSocket disconnected. Reconnecting in $delay seconds (attempt $_reconnectAttempts)...');
+      print(
+          'WebSocket disconnected. Reconnecting in $delay seconds (attempt $_reconnectAttempts)...');
     }
 
     _reconnectTimer?.cancel();
@@ -270,6 +310,7 @@ class WebSocketService {
     disconnect();
     _initialStateController.close();
     _packetBatchController.close();
+    _packetAnalysisUpdateController.close();
     _newThreatController.close();
     _alertUpdatedController.close();
     _alertResolvedController.close();

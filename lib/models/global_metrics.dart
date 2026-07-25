@@ -26,7 +26,7 @@ class GlobalSecurityMetrics {
   }) {
     final snapshot = dashboardStats['snapshot'] as Map<String, dynamic>? ?? {};
     final period = dashboardStats['period'] as Map<String, dynamic>? ?? {};
-    
+
     return GlobalSecurityMetrics(
       activeThreats: snapshot['active_threats'] ?? 0,
       criticalThreats: period['critical_threats'] ?? 0,

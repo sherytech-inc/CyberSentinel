@@ -48,7 +48,9 @@ class MainLayout extends StatelessWidget {
         label: 'Virus Scanner',
         icon: LucideIcons.scanSearch),
     _NavItem(
-        route: '/ip-analysis', label: 'Threat Intelligence', icon: LucideIcons.globe),
+        route: '/ip-analysis',
+        label: 'Threat Intelligence',
+        icon: LucideIcons.globe),
     _NavItem(route: '/settings', label: 'Settings', icon: LucideIcons.settings),
   ];
 
@@ -62,43 +64,109 @@ class MainLayout extends StatelessWidget {
       context.read<AppStateProvider>().setCurrentRoute(location);
     });
 
-    return Consumer<AppStateProvider>(
-      builder: (context, appState, _) {
-        return Scaffold(
-          backgroundColor: AppTheme.bgPrimary,
-          body: Stack(
-            children: [
-              Row(
+    return Consumer<AuthProvider>(
+      builder: (context, authState, _) {
+        if (authState.isLoading) {
+          return const Scaffold(
+            backgroundColor: AppTheme.bgPrimary,
+            body: Center(
+              child: CircularProgressIndicator(color: AppTheme.primary),
+            ),
+          );
+        }
+
+        if (authState.user != null && authState.profile == null) {
+          return Scaffold(
+            backgroundColor: AppTheme.bgPrimary,
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _Sidebar(
-                    navItems: _navItems,
-                    currentRoute: appState.currentRoute,
-                    onRouteSelected: (route) {
-                      context.go(route);
-                      appState.setCurrentRoute(route);
-                    },
-                  ),
-                  Expanded(
-                    child: Column(
-                      children: [
-                        _TopBar(title: appState.pageTitle),
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.all(AppTheme.spacing24),
-                            // [child] is the screen GoRouter injects via ShellRoute.
-                            // Fallback to DashboardScreen never fires in practice
-                            // because GoRouter always provides a child, but keeps
-                            // the widget tree valid during hot reload edge cases.
-                            child: child ?? const SizedBox.shrink(),
-                          ),
-                        ),
-                      ],
+                  const Icon(LucideIcons.triangleAlert,
+                      size: 48, color: AppTheme.error),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Your CyberSentinel profile could not be loaded.',
+                    style: TextStyle(
+                      color: AppTheme.textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
                     ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ElevatedButton.icon(
+                        icon: const Icon(LucideIcons.refreshCw, size: 16),
+                        label: const Text('Retry'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primary,
+                          foregroundColor: Colors.white,
+                        ),
+                        onPressed: () {
+                          authState.retryProfileBootstrap();
+                        },
+                      ),
+                      const SizedBox(width: 16),
+                      TextButton.icon(
+                        icon: const Icon(LucideIcons.logOut, size: 16),
+                        label: const Text('Sign Out'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppTheme.textSecondary,
+                        ),
+                        onPressed: () {
+                          authState.signOut();
+                        },
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+          );
+        }
+
+        return Consumer<AppStateProvider>(
+          builder: (context, appState, _) {
+            return Scaffold(
+              backgroundColor: AppTheme.bgPrimary,
+              body: Stack(
+                children: [
+                  Row(
+                    children: [
+                      _Sidebar(
+                        navItems: _navItems,
+                        currentRoute: appState.currentRoute,
+                        onRouteSelected: (route) {
+                          context.go(route);
+                          appState.setCurrentRoute(route);
+                        },
+                      ),
+                      Expanded(
+                        child: Column(
+                          children: [
+                            _TopBar(title: appState.pageTitle),
+                            Expanded(
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.all(AppTheme.spacing24),
+                                // [child] is the screen GoRouter injects via ShellRoute.
+                                // Fallback to DashboardScreen never fires in practice
+                                // because GoRouter always provides a child, but keeps
+                                // the widget tree valid during hot reload edge cases.
+                                child: child ?? const SizedBox.shrink(),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
         );
       },
     );
@@ -183,18 +251,16 @@ class _Sidebar extends StatelessWidget {
       child: Consumer<AuthProvider>(
         builder: (context, authState, child) {
           final profile = authState.profile;
-          final email = authState.user?.email ?? 'Not logged in';
-          final role = profile?.role ?? 'Guest';
-          final name = profile?.displayName.isNotEmpty == true 
-              ? profile!.displayName 
-              : 'User';
+          final email = authState.user?.email ?? '';
+          final role = profile?.role ?? '';
 
           return Row(
             children: [
               CircleAvatar(
                 radius: 16,
                 backgroundColor: AppTheme.primary.withOpacity(0.2),
-                child: const Icon(LucideIcons.user, size: 16, color: AppTheme.primary),
+                child: const Icon(LucideIcons.user,
+                    size: 16, color: AppTheme.primary),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -203,18 +269,21 @@ class _Sidebar extends StatelessWidget {
                   children: [
                     Text(
                       role.toUpperCase(),
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                      style: const TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w500),
                     ),
                     Text(
                       email,
-                      style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                      style: const TextStyle(
+                          fontSize: 11, color: AppTheme.textSecondary),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
               IconButton(
-                icon: const Icon(LucideIcons.logOut, size: 18, color: AppTheme.textSecondary),
+                icon: const Icon(LucideIcons.logOut,
+                    size: 18, color: AppTheme.textSecondary),
                 tooltip: 'Logout',
                 onPressed: () {
                   context.read<AuthProvider>().signOut();
@@ -336,7 +405,8 @@ class _TopBar extends StatelessWidget {
                 icon: CircleAvatar(
                   radius: 14,
                   backgroundColor: AppTheme.primary.withOpacity(0.2),
-                  child: const Icon(LucideIcons.user, size: 14, color: AppTheme.primary),
+                  child: const Icon(LucideIcons.user,
+                      size: 14, color: AppTheme.primary),
                 ),
                 onSelected: (value) {
                   if (value == 'logout') {
@@ -348,9 +418,11 @@ class _TopBar extends StatelessWidget {
                     value: 'profile',
                     child: Row(
                       children: const [
-                        Icon(LucideIcons.user, size: 16, color: AppTheme.textSecondary),
+                        Icon(LucideIcons.user,
+                            size: 16, color: AppTheme.textSecondary),
                         SizedBox(width: 8),
-                        Text('Profile', style: TextStyle(color: AppTheme.textPrimary)),
+                        Text('Profile',
+                            style: TextStyle(color: AppTheme.textPrimary)),
                       ],
                     ),
                   ),
@@ -359,7 +431,8 @@ class _TopBar extends StatelessWidget {
                     value: 'logout',
                     child: Row(
                       children: const [
-                        Icon(LucideIcons.logOut, size: 16, color: AppTheme.error),
+                        Icon(LucideIcons.logOut,
+                            size: 16, color: AppTheme.error),
                         SizedBox(width: 8),
                         Text('Logout', style: TextStyle(color: AppTheme.error)),
                       ],

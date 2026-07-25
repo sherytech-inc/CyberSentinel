@@ -2,7 +2,6 @@ import 'package:cybersentinel/core/api/clients/cloud_control_plane_client.dart';
 import 'session_cleanup_coordinator.dart';
 import 'package:flutter/foundation.dart';
 import '../models/integration_status.dart';
-import '../services/api_service.dart';
 
 class IntegrationsProvider extends ChangeNotifier {
   IntegrationsProvider() {
@@ -12,7 +11,7 @@ class IntegrationsProvider extends ChangeNotifier {
   IntegrationsResponse? _integrations;
   bool _isLoading = false;
   String? _error;
-  
+
   final Map<String, bool> _testingStatus = {};
   final Map<String, IntegrationTestResponse> _testResults = {};
 
@@ -21,7 +20,8 @@ class IntegrationsProvider extends ChangeNotifier {
   String? get error => _error;
 
   bool isTesting(String provider) => _testingStatus[provider] ?? false;
-  IntegrationTestResponse? getTestResult(String provider) => _testResults[provider];
+  IntegrationTestResponse? getTestResult(String provider) =>
+      _testResults[provider];
 
   Future<void> fetchIntegrations() async {
     _isLoading = true;
@@ -49,7 +49,7 @@ class IntegrationsProvider extends ChangeNotifier {
       final response = await CloudControlPlaneClient.testIntegration(provider);
       final result = IntegrationTestResponse.fromJson(response);
       _testResults[provider] = result;
-      
+
       // Update the main integrations object to reflect the new state
       if (_integrations != null) {
         if (provider == 'virustotal') {
@@ -87,7 +87,8 @@ class IntegrationsProvider extends ChangeNotifier {
     }
   }
 
-  IntegrationStatus _updateStatus(IntegrationStatus old, IntegrationTestResponse result) {
+  IntegrationStatus _updateStatus(
+      IntegrationStatus old, IntegrationTestResponse result) {
     return IntegrationStatus(
       provider: old.provider,
       configured: result.configured,

@@ -2,16 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../core/theme/app_theme.dart';
-import '../models/global_metrics.dart';
 import '../providers/dashboard_provider.dart';
-import '../providers/metrics_provider.dart';
 import '../widgets/dashboard/threat_score_card.dart';
 import '../widgets/dashboard/kpi_card.dart';
 import '../widgets/dashboard/traffic_chart.dart';
 import '../widgets/dashboard/alerts_panel.dart';
 import '../widgets/dashboard/packet_classification.dart';
 import '../widgets/dashboard/malicious_ips_table.dart';
-import '../widgets/dashboard/capture_diagnostics_card.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -49,12 +46,23 @@ class DashboardScreen extends StatelessWidget {
   Widget _buildKPIRow(BuildContext context) {
     final isMobile = AppTheme.isMobile(context);
 
-    return Selector<MetricsProvider, GlobalSecurityMetrics>(
-      selector: (context, provider) => provider.metrics,
-      builder: (context, metrics, _) {
-        final activeThreats = metrics.activeThreats.toString();
-        final packetsCount = _formatCount(metrics.totalPackets);
-        final suspiciousIPs = metrics.suspiciousIps.toString();
+    return Consumer<DashboardProvider>(
+      builder: (context, dashboard, _) {
+        final captured = _formatCount(dashboard.capturedPacketsCount);
+        final analyzed = _formatCount(dashboard.analyzedPacketsCount);
+        final pending = _formatCount(dashboard.pendingPacketsCount);
+        final active = dashboard.isMonitoringActive;
+        final capturedLabel =
+            active ? 'Current Session Captured' : 'Last Session Captured';
+        final analyzedLabel =
+            active ? 'Current Session Analyzed' : 'Last Session Analyzed';
+        final fourthLabel =
+            active ? 'Pending Analysis' : 'Last Session Analysis Completion';
+        final fourthValue = active
+            ? pending
+            : dashboard.capturedPacketsCount == 0
+                ? 'N/A'
+                : '${(dashboard.analysisCompletion * 100).toStringAsFixed(1)}%';
 
         if (isMobile) {
           return Column(
@@ -63,24 +71,24 @@ class DashboardScreen extends StatelessWidget {
               const SizedBox(height: AppTheme.spacing16),
               KPICard(
                 icon: LucideIcons.triangleAlert,
-                label: 'Active Threats',
-                value: activeThreats,
-                iconColor: AppTheme.error,
-                iconBg: AppTheme.error.withOpacity(0.1),
-              ),
-              const SizedBox(height: AppTheme.spacing16),
-              KPICard(
-                icon: LucideIcons.activity,
-                label: 'Packets Analyzed',
-                value: packetsCount,
+                label: capturedLabel,
+                value: captured,
                 iconColor: AppTheme.info,
                 iconBg: AppTheme.info.withOpacity(0.1),
               ),
               const SizedBox(height: AppTheme.spacing16),
               KPICard(
-                icon: LucideIcons.globe,
-                label: 'Suspicious IPs',
-                value: suspiciousIPs,
+                icon: LucideIcons.activity,
+                label: analyzedLabel,
+                value: analyzed,
+                iconColor: AppTheme.info,
+                iconBg: AppTheme.info.withOpacity(0.1),
+              ),
+              const SizedBox(height: AppTheme.spacing16),
+              KPICard(
+                icon: LucideIcons.clock,
+                label: fourthLabel,
+                value: fourthValue,
                 iconColor: AppTheme.warning,
                 iconBg: AppTheme.warning.withOpacity(0.1),
               ),
@@ -95,18 +103,8 @@ class DashboardScreen extends StatelessWidget {
             Expanded(
               child: KPICard(
                 icon: LucideIcons.triangleAlert,
-                label: 'Active Threats',
-                value: activeThreats,
-                iconColor: AppTheme.error,
-                iconBg: AppTheme.error.withOpacity(0.1),
-              ),
-            ),
-            const SizedBox(width: AppTheme.spacing16),
-            Expanded(
-              child: KPICard(
-                icon: LucideIcons.activity,
-                label: 'Packets Analyzed',
-                value: packetsCount,
+                label: capturedLabel,
+                value: captured,
                 iconColor: AppTheme.info,
                 iconBg: AppTheme.info.withOpacity(0.1),
               ),
@@ -114,9 +112,19 @@ class DashboardScreen extends StatelessWidget {
             const SizedBox(width: AppTheme.spacing16),
             Expanded(
               child: KPICard(
-                icon: LucideIcons.globe,
-                label: 'Suspicious IPs',
-                value: suspiciousIPs,
+                icon: LucideIcons.activity,
+                label: analyzedLabel,
+                value: analyzed,
+                iconColor: AppTheme.info,
+                iconBg: AppTheme.info.withOpacity(0.1),
+              ),
+            ),
+            const SizedBox(width: AppTheme.spacing16),
+            Expanded(
+              child: KPICard(
+                icon: LucideIcons.clock,
+                label: fourthLabel,
+                value: fourthValue,
                 iconColor: AppTheme.warning,
                 iconBg: AppTheme.warning.withOpacity(0.1),
               ),
@@ -126,7 +134,6 @@ class DashboardScreen extends StatelessWidget {
       },
     );
   }
-
 
   Widget _buildTrafficAlertsRow(BuildContext context) {
     final isMobile = AppTheme.isMobile(context);

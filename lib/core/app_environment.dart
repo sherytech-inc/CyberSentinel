@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 class AppEnvironment {
   static const apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
@@ -19,6 +17,27 @@ class AppEnvironment {
   static const bool enableGoogleAuth = bool.fromEnvironment(
     'ENABLE_GOOGLE_AUTH',
     defaultValue: false,
+  );
+
+  // Sidecar explicitly requested configurations
+  static const desktopBackendMode = String.fromEnvironment(
+    'DESKTOP_BACKEND_MODE',
+    defaultValue: 'external',
+  );
+
+  static const desktopBackendPython = String.fromEnvironment(
+    'DESKTOP_BACKEND_PYTHON',
+    defaultValue: '',
+  );
+
+  static const desktopBackendWorkdir = String.fromEnvironment(
+    'DESKTOP_BACKEND_WORKDIR',
+    defaultValue: '',
+  );
+
+  static const bundledBackendRelativePath = String.fromEnvironment(
+    'BUNDLED_BACKEND_RELATIVE_PATH',
+    defaultValue: 'cybersentinel_backend/cybersentinel_backend',
   );
 
   static void validate() {

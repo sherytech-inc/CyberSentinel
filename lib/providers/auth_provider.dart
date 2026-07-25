@@ -1,20 +1,23 @@
-import 'package:cybersentinel/core/api/clients/local_agent_client.dart';
+import 'dart:async';
 import 'dart:convert';
-import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:http/http.dart' as http;
+
+import 'package:cybersentinel/core/api/clients/local_agent_client.dart';
+import 'package:cybersentinel/core/sidecar/sidecar_manager_interface.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../models/analyst_profile.dart';
 import '../services/websocket_service.dart';
-import '../services/api_service.dart';
 import 'session_cleanup_coordinator.dart';
+
 class AuthProvider extends ChangeNotifier {
   final SupabaseClient _supabase = Supabase.instance.client;
   User? _user;
   AnalystProfile? _profile;
   bool _isLoading = true;
   String? _error;
-  String _apiBaseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://127.0.0.1:8000');
 
   User? get user => _user;
   AnalystProfile? get profile => _profile;
@@ -33,57 +36,223 @@ class AuthProvider extends ChangeNotifier {
       final Session? session = data.session;
 
       _user = session?.user;
-      
-      if (event == AuthChangeEvent.signedIn || event == AuthChangeEvent.tokenRefreshed) {
+
+      if (event == AuthChangeEvent.initialSession ||
+          event == AuthChangeEvent.signedIn ||
+          event == AuthChangeEvent.tokenRefreshed) {
         if (_user != null) {
           await _bootstrapProfile(session!.accessToken);
         }
       } else if (event == AuthChangeEvent.signedOut) {
         _profile = null;
         _user = null;
+        _error = null;
         SessionCleanupCoordinator.performCleanup();
       }
 
       _isLoading = false;
       notifyListeners();
     }, onError: (error) {
-      _error = 'Authentication stream error: $error';
+      if (kDebugMode) {
+        debugPrint('Authentication stream error: $error');
+      }
+
+      _error = 'The authentication session could not be restored.';
+      _isLoading = false;
       notifyListeners();
     });
   }
 
   Future<void> _bootstrapProfile(String accessToken) async {
+    _error = null;
+    _profile = null;
+
     try {
-      final uri = Uri.parse('$_apiBaseUrl/api/v1/auth/bootstrap-profile');
-      final response = await http.post(
-        uri,
-        headers: {
-          'Authorization': 'Bearer $accessToken',
-          'Content-Type': 'application/json',
-        },
+      final uri = Uri.parse(
+        '${LocalAgentClient.baseUrl}/api/v1/auth/bootstrap-profile',
       );
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        _profile = AnalystProfile.fromJson(data['profile']);
-      } else {
-        final errorData = json.decode(response.body);
-        _error = errorData['detail'] ?? 'Failed to authorize profile';
-        // If the backend refuses authorization, we should sign them out
-        if (response.statusCode == 403) {
-           await signOut();
-        }
+      final headers = <String, String>{
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
+
+      final localToken = SidecarManager().localToken;
+      if (localToken != null && localToken.isNotEmpty) {
+        headers['X-CyberSentinel-Local-Token'] = localToken;
       }
-    } catch (e) {
-      _error = 'Network error during profile bootstrap: $e';
+
+      final response = await http
+          .post(uri, headers: headers)
+          .timeout(const Duration(seconds: 15));
+
+      final responseData = _tryDecodeJsonObject(response.body);
+
+      if (response.statusCode == 200) {
+        final profileData = responseData?['profile'];
+
+        if (profileData is! Map) {
+          throw const FormatException('Profile response is missing.');
+        }
+
+        _profile = AnalystProfile.fromJson(
+          Map<String, dynamic>.from(profileData),
+        );
+        _error = null;
+        return;
+      }
+
+      final existingProfile = await _loadExistingProfileDirectly();
+
+      if (existingProfile != null) {
+        _profile = existingProfile;
+        _error = null;
+        return;
+      }
+
+      _error = _profileBootstrapMessage(
+        statusCode: response.statusCode,
+        responseData: responseData,
+      );
+    } on TimeoutException {
+      final existingProfile = await _loadExistingProfileDirectly();
+
+      if (existingProfile != null) {
+        _profile = existingProfile;
+        _error = null;
+        return;
+      }
+
+      _error =
+          'The profile service took too long to respond. Please try again.';
+    } catch (error) {
+      if (kDebugMode) {
+        debugPrint('Profile bootstrap failed: $error');
+      }
+
+      final existingProfile = await _loadExistingProfileDirectly();
+
+      if (existingProfile != null) {
+        _profile = existingProfile;
+        _error = null;
+        return;
+      }
+
+      _error =
+          'Your CyberSentinel profile could not be loaded. Please try again.';
     }
+  }
+
+  Future<void> retryProfileBootstrap() async {
+    final session = _supabase.auth.currentSession;
+
+    if (session == null) {
+      _error = 'Your session has expired. Please sign in again.';
+      notifyListeners();
+      return;
+    }
+
+    _setLoading(true);
+    try {
+      await _bootstrapProfile(session.accessToken);
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Map<String, dynamic>? _tryDecodeJsonObject(String body) {
+    final trimmed = body.trim();
+
+    if (trimmed.isEmpty) {
+      return null;
+    }
+
+    try {
+      final decoded = jsonDecode(trimmed);
+
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+
+      if (decoded is Map) {
+        return Map<String, dynamic>.from(decoded);
+      }
+    } catch (_) {
+      // The backend may return a plain-text 500 response.
+      // Never expose a JSON FormatException to the user.
+    }
+
+    return null;
+  }
+
+  Future<AnalystProfile?> _loadExistingProfileDirectly() async {
+    final currentUser = _supabase.auth.currentUser;
+
+    if (currentUser == null) {
+      return null;
+    }
+
+    try {
+      final data = await _supabase
+          .from('profiles')
+          .select('user_id, email, display_name, role, is_active')
+          .eq('user_id', currentUser.id)
+          .maybeSingle();
+
+      if (data == null || data['is_active'] != true) {
+        return null;
+      }
+
+      return AnalystProfile.fromJson(
+        Map<String, dynamic>.from(data),
+      );
+    } catch (error) {
+      if (kDebugMode) {
+        debugPrint('Direct profile lookup failed: $error');
+      }
+
+      return null;
+    }
+  }
+
+  String _profileBootstrapMessage({
+    required int statusCode,
+    required Map<String, dynamic>? responseData,
+  }) {
+    final detail = responseData?['detail'];
+
+    if (statusCode == 401) {
+      return 'Your session has expired. Please sign in again.';
+    }
+
+    if (statusCode == 403) {
+      if (detail is String && detail.toLowerCase().contains('disabled')) {
+        return 'Your CyberSentinel account is currently disabled.';
+      }
+
+      return 'This account is not authorized to access CyberSentinel.';
+    }
+
+    if (statusCode == 503) {
+      return 'The profile service is temporarily unavailable. Please try again.';
+    }
+
+    return 'Your CyberSentinel profile could not be loaded. Please try again.';
   }
 
   String _mapAuthenticationError(Object error) {
     final message = error.toString().toLowerCase();
 
     if (message.contains('invalid login credentials')) {
-      return 'The email or password is incorrect.';
+      return 'The email or password is incorrect. (If you just registered, you may need to confirm your email).';
+    }
+    if (message.contains('rate limit') ||
+        message.contains('too many requests')) {
+      return 'Too many attempts. Please wait a moment and try again.';
+    }
+    if (message.contains('user already registered')) {
+      return 'An account with this email already exists.';
     }
     if (message.contains('dummy.supabase.co') ||
         message.contains('authentication configuration')) {
@@ -98,7 +267,7 @@ class AuthProvider extends ChangeNotifier {
       return 'This account is not authorized to access CyberSentinel.';
     }
 
-    return 'Sign-in could not be completed. Please try again.';
+    return 'Authentication failed: ${error.toString().replaceAll("AuthApiException(message: ", "").replaceAll(")", "")}';
   }
 
   Future<bool> signInWithEmail(String email, String password) async {
@@ -123,7 +292,8 @@ class AuthProvider extends ChangeNotifier {
     return false;
   }
 
-  Future<bool> signUp(String email, String password, {String? displayName}) async {
+  Future<bool> signUp(String email, String password,
+      {String? displayName}) async {
     _setLoading(true);
     try {
       final AuthResponse res = await _supabase.auth.signUp(
@@ -189,6 +359,7 @@ class AuthProvider extends ChangeNotifier {
       await _supabase.auth.signOut();
       _profile = null;
       _user = null;
+      _error = null;
       WebSocketService().disconnect();
       SessionCleanupCoordinator.performCleanup();
     } finally {

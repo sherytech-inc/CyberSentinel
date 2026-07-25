@@ -2,11 +2,24 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!--
+	  DEVELOPMENT ONLY — DebugProfile.entitlements
+
+	  The App Sandbox is DISABLED for debug and profile builds.
+	  Rationale: managed_source mode spawns an external Python/uvicorn process
+	  whose executable lives outside the app bundle. macOS App Sandbox blocks
+	  fork/exec of non-bundled executables even with path-read entitlements.
+	  Disabling the sandbox for debug builds is standard Flutter macOS practice.
+
+	  This entitlement file is NEVER used in Release builds.
+	  Release.entitlements retains com.apple.security.app-sandbox = true and
+	  uses the bundled executable inside Contents/Resources/.
+	-->
 	<key>com.apple.security.app-sandbox</key>
-	<true/>
+	<false/>
+
+	<!-- JIT compilation required by Flutter in debug/profile mode -->
 	<key>com.apple.security.cs.allow-jit</key>
-	<true/>
-	<key>com.apple.security.network.server</key>
 	<true/>
 </dict>
 </plist>

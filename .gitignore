@@ -68,3 +68,27 @@ config/dev.json
 config/prod.json
 .env
 .env.*
+
+# Local nested checkout accidentally created inside this repository
+/CyberSentinel/
+
+# Local runtime and signing material
+*.p12
+*.pfx
+*.pem
+*.key
+*.cer
+*.crt
+*.mobileprovision
+*.provisionprofile
+*.xcuserstate
+DerivedData/
+macos/Flutter/ephemeral/
+
+# Captures, temporary files, and local runtime output
+*.pcap
+*.pcapng
+*.pid
+*.tmp
+*.temp
+tmp/

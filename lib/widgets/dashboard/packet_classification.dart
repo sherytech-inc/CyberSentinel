@@ -11,7 +11,9 @@ class PacketClassification extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<DashboardProvider>(
       builder: (context, provider, _) {
-        final total = provider.normalCount + provider.suspiciousCount + provider.maliciousCount;
+        final total = provider.normalCount +
+            provider.suspiciousCount +
+            provider.maliciousCount;
         double normalPct = 100.0;
         double suspiciousPct = 0.0;
         double maliciousPct = 0.0;
@@ -77,7 +79,8 @@ class PacketClassification extends StatelessWidget {
                                 PieChartSectionData(
                                   color: AppTheme.success,
                                   value: normalPct,
-                                  showTitle: normalPct > 5 || total > 0 && normalPct == 100,
+                                  showTitle: normalPct > 5 ||
+                                      total > 0 && normalPct == 100,
                                   title: '${normalPct.toStringAsFixed(1)}%',
                                   radius: 50,
                                   titleStyle: const TextStyle(
@@ -90,7 +93,8 @@ class PacketClassification extends StatelessWidget {
                                 PieChartSectionData(
                                   color: AppTheme.warning,
                                   value: suspiciousPct,
-                                  showTitle: suspiciousPct > 5 || total > 0 && suspiciousPct == 100,
+                                  showTitle: suspiciousPct > 5 ||
+                                      total > 0 && suspiciousPct == 100,
                                   title: '${suspiciousPct.toStringAsFixed(1)}%',
                                   radius: 50,
                                   titleStyle: const TextStyle(
@@ -103,7 +107,8 @@ class PacketClassification extends StatelessWidget {
                                 PieChartSectionData(
                                   color: AppTheme.error,
                                   value: maliciousPct,
-                                  showTitle: maliciousPct > 5 || total > 0 && maliciousPct == 100,
+                                  showTitle: maliciousPct > 5 ||
+                                      total > 0 && maliciousPct == 100,
                                   title: '${maliciousPct.toStringAsFixed(1)}%',
                                   radius: 50,
                                   titleStyle: const TextStyle(
@@ -118,11 +123,14 @@ class PacketClassification extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: AppTheme.spacing24),
-              _buildLegendItem('Normal Traffic', '${normalPct.toStringAsFixed(1)}%', AppTheme.success),
+              _buildLegendItem('Normal Traffic',
+                  '${normalPct.toStringAsFixed(1)}%', AppTheme.success),
               const SizedBox(height: AppTheme.spacing12),
-              _buildLegendItem('Suspicious', '${suspiciousPct.toStringAsFixed(1)}%', AppTheme.warning),
+              _buildLegendItem('Suspicious',
+                  '${suspiciousPct.toStringAsFixed(1)}%', AppTheme.warning),
               const SizedBox(height: AppTheme.spacing12),
-              _buildLegendItem('Malicious', '${maliciousPct.toStringAsFixed(1)}%', AppTheme.error),
+              _buildLegendItem('Malicious',
+                  '${maliciousPct.toStringAsFixed(1)}%', AppTheme.error),
             ],
           ),
         );

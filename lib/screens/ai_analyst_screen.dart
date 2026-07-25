@@ -30,9 +30,9 @@ class _AIAnalystScreenState extends State<AIAnalystScreen> {
   }
 
   void _handleSend(BuildContext context, String text) {
-    if (text.trim().isEmpty) return;
-    _textController.clear();
     final provider = context.read<ChatbotProvider>();
+    if (text.trim().isEmpty || provider.isLoading) return;
+    _textController.clear();
     provider.sendMessage(text).then((_) => _scrollToBottom());
     _scrollToBottom();
   }
@@ -154,7 +154,8 @@ class _AIAnalystScreenState extends State<AIAnalystScreen> {
             label: Text(q, style: const TextStyle(fontSize: 13)),
             backgroundColor: AppTheme.bgPrimary,
             side: const BorderSide(color: AppTheme.borderPrimary),
-            onPressed: () => _handleSend(context, q),
+            onPressed:
+                provider.isLoading ? null : () => _handleSend(context, q),
           );
         }).toList(),
       ),
@@ -162,51 +163,58 @@ class _AIAnalystScreenState extends State<AIAnalystScreen> {
   }
 
   Widget _buildInputArea(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(AppTheme.spacing16),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _textController,
-              style: const TextStyle(color: AppTheme.textPrimary),
-              decoration: InputDecoration(
-                hintText: 'Ask the AI Analyst a question...',
-                hintStyle: const TextStyle(color: AppTheme.textSecondary),
-                filled: true,
-                fillColor: AppTheme.bgPrimary,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                  borderSide: const BorderSide(color: AppTheme.borderPrimary),
+    return Consumer<ChatbotProvider>(
+      builder: (context, provider, _) => Padding(
+        padding: const EdgeInsets.all(AppTheme.spacing16),
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                enabled: !provider.isLoading,
+                controller: _textController,
+                style: const TextStyle(color: AppTheme.textPrimary),
+                decoration: InputDecoration(
+                  hintText: 'Ask the AI Analyst a question...',
+                  hintStyle: const TextStyle(color: AppTheme.textSecondary),
+                  filled: true,
+                  fillColor: AppTheme.bgPrimary,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                    borderSide: const BorderSide(color: AppTheme.borderPrimary),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                    borderSide: const BorderSide(color: AppTheme.borderPrimary),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                    borderSide: const BorderSide(color: AppTheme.primary),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppTheme.spacing16,
+                    vertical: AppTheme.spacing16,
+                  ),
                 ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                  borderSide: const BorderSide(color: AppTheme.borderPrimary),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                  borderSide: const BorderSide(color: AppTheme.primary),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: AppTheme.spacing16,
-                  vertical: AppTheme.spacing16,
-                ),
+                onSubmitted: provider.isLoading
+                    ? null
+                    : (val) => _handleSend(context, val),
               ),
-              onSubmitted: (val) => _handleSend(context, val),
             ),
-          ),
-          const SizedBox(width: AppTheme.spacing12),
-          Container(
-            decoration: BoxDecoration(
-              color: AppTheme.primary,
-              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+            const SizedBox(width: AppTheme.spacing12),
+            Container(
+              decoration: BoxDecoration(
+                color: AppTheme.primary,
+                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+              ),
+              child: IconButton(
+                icon: const Icon(LucideIcons.send, color: Colors.white),
+                onPressed: provider.isLoading
+                    ? null
+                    : () => _handleSend(context, _textController.text),
+              ),
             ),
-            child: IconButton(
-              icon: const Icon(LucideIcons.send, color: Colors.white),
-              onPressed: () => _handleSend(context, _textController.text),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -243,7 +251,7 @@ class _AIAnalystScreenState extends State<AIAnalystScreen> {
                 border:
                     isUser ? null : Border.all(color: AppTheme.borderPrimary),
               ),
-              child: isUser 
+              child: isUser
                   ? Text(
                       message.text,
                       style: const TextStyle(
@@ -255,8 +263,13 @@ class _AIAnalystScreenState extends State<AIAnalystScreen> {
                   : MarkdownBody(
                       data: message.text,
                       styleSheet: MarkdownStyleSheet(
-                        p: const TextStyle(color: AppTheme.textPrimary, fontSize: 14, height: 1.5),
-                        strong: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold),
+                        p: const TextStyle(
+                            color: AppTheme.textPrimary,
+                            fontSize: 14,
+                            height: 1.5),
+                        strong: const TextStyle(
+                            color: AppTheme.textPrimary,
+                            fontWeight: FontWeight.bold),
                         listBullet: const TextStyle(color: AppTheme.primary),
                       ),
                     ),

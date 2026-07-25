@@ -37,7 +37,8 @@ class _ThreatResponseScreenState extends State<ThreatResponseScreen> {
     return Consumer<ThreatResponseProvider>(
       builder: (context, provider, child) {
         if (provider.isLoading && provider.threatQueue.isEmpty) {
-          return const Center(child: CircularProgressIndicator(color: AppTheme.primary));
+          return const Center(
+              child: CircularProgressIndicator(color: AppTheme.primary));
         }
 
         return SingleChildScrollView(
@@ -58,7 +59,9 @@ class _ThreatResponseScreenState extends State<ThreatResponseScreen> {
                   : Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(child: _buildActionHistorySection(context, provider)),
+                        Expanded(
+                            child:
+                                _buildActionHistorySection(context, provider)),
                       ],
                     ),
             ],
@@ -68,19 +71,33 @@ class _ThreatResponseScreenState extends State<ThreatResponseScreen> {
     );
   }
 
-  Widget _buildKPISection(BuildContext context, ThreatResponseProvider provider) {
+  Widget _buildKPISection(
+      BuildContext context, ThreatResponseProvider provider) {
     final kpis = [
-      _buildKPICard(LucideIcons.shieldAlert, 'Active Threats', provider.activeThreats.toString(), AppTheme.error),
-      _buildKPICard(LucideIcons.ban, 'Blocked IPs', provider.blockedIPsCount.toString(), AppTheme.warning),
-      _buildKPICard(LucideIcons.activity, 'Total Actions', provider.totalActions.toString(), AppTheme.info),
+      _buildKPICard(LucideIcons.shieldAlert, 'Active Threats',
+          provider.activeThreats.toString(), AppTheme.error),
+      _buildKPICard(LucideIcons.ban, 'Blocked IPs',
+          provider.blockedIPsCount.toString(), AppTheme.warning),
+      _buildKPICard(LucideIcons.activity, 'Total Actions',
+          provider.totalActions.toString(), AppTheme.info),
     ];
 
     if (AppTheme.isMobile(context)) {
-      return Column(children: kpis.map((w) => Padding(padding: const EdgeInsets.only(bottom: AppTheme.spacing16), child: w)).toList());
+      return Column(
+          children: kpis
+              .map((w) => Padding(
+                  padding: const EdgeInsets.only(bottom: AppTheme.spacing16),
+                  child: w))
+              .toList());
     }
 
     return Row(
-      children: kpis.map((w) => Expanded(child: Padding(padding: const EdgeInsets.only(right: AppTheme.spacing16), child: w))).toList(),
+      children: kpis
+          .map((w) => Expanded(
+              child: Padding(
+                  padding: const EdgeInsets.only(right: AppTheme.spacing16),
+                  child: w)))
+          .toList(),
     );
   }
 
@@ -106,8 +123,14 @@ class _ThreatResponseScreenState extends State<ThreatResponseScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(value, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 28, fontWeight: FontWeight.bold)),
-              Text(label, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+              Text(value,
+                  style: const TextStyle(
+                      color: AppTheme.textPrimary,
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold)),
+              Text(label,
+                  style: const TextStyle(
+                      color: AppTheme.textSecondary, fontSize: 14)),
             ],
           ),
         ],
@@ -115,7 +138,8 @@ class _ThreatResponseScreenState extends State<ThreatResponseScreen> {
     );
   }
 
-  Widget _buildThreatQueueSection(BuildContext context, ThreatResponseProvider provider) {
+  Widget _buildThreatQueueSection(
+      BuildContext context, ThreatResponseProvider provider) {
     return Container(
       padding: const EdgeInsets.all(AppTheme.spacing24),
       decoration: BoxDecoration(
@@ -130,12 +154,21 @@ class _ThreatResponseScreenState extends State<ThreatResponseScreen> {
             children: [
               const Icon(LucideIcons.list, color: AppTheme.primary, size: 20),
               const SizedBox(width: AppTheme.spacing12),
-              const Text('Active Threat Queue', style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.bold)),
+              const Text('Active Threat Queue',
+                  style: TextStyle(
+                      color: AppTheme.textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold)),
               const Spacer(),
               IconButton(
-                icon: _isRefreshing 
-                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.textSecondary))
-                    : const Icon(LucideIcons.refreshCw, color: AppTheme.textSecondary, size: 18),
+                icon: _isRefreshing
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: AppTheme.textSecondary))
+                    : const Icon(LucideIcons.refreshCw,
+                        color: AppTheme.textSecondary, size: 18),
                 onPressed: () => _refreshThreatResponse(provider),
               ),
             ],
@@ -148,29 +181,35 @@ class _ThreatResponseScreenState extends State<ThreatResponseScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(LucideIcons.shieldCheck, color: AppTheme.success, size: 32),
+                    Icon(LucideIcons.shieldCheck,
+                        color: AppTheme.success, size: 32),
                     SizedBox(height: 12),
-                    Text('No active threats detected', style: TextStyle(color: AppTheme.textSecondary)),
+                    Text('No active threats detected',
+                        style: TextStyle(color: AppTheme.textSecondary)),
                   ],
                 ),
               ),
             )
           else
             Column(
-              children: provider.threatQueue.map((threat) => _buildThreatRow(context, provider, threat)).toList(),
+              children: provider.threatQueue
+                  .map((threat) => _buildThreatRow(context, provider, threat))
+                  .toList(),
             ),
         ],
       ),
     );
   }
 
-  Widget _buildThreatRow(BuildContext context, ThreatResponseProvider provider, Map<String, dynamic> threat) {
+  Widget _buildThreatRow(BuildContext context, ThreatResponseProvider provider,
+      Map<String, dynamic> threat) {
     final alertId = threat['alert_id'] ?? '';
     final ip = threat['source_ip'] ?? 'Unknown';
     final severity = threat['severity'] ?? 'LOW';
     final score = threat['threat_score'] ?? 0.0;
     final isExpanded = provider.expandedThreatId == alertId;
-    final createdAt = DateTime.tryParse(threat['created_at'] ?? '') ?? DateTime.now();
+    final createdAt =
+        DateTime.tryParse(threat['created_at'] ?? '') ?? DateTime.now();
 
     return Card(
       color: AppTheme.bgPrimary,
@@ -184,14 +223,23 @@ class _ThreatResponseScreenState extends State<ThreatResponseScreen> {
           ListTile(
             title: Row(
               children: [
-                Text(ip, style: const TextStyle(color: AppTheme.textPrimary, fontFamily: 'monospace', fontWeight: FontWeight.bold)),
+                Text(ip,
+                    style: const TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontFamily: 'monospace',
+                        fontWeight: FontWeight.bold)),
                 const SizedBox(width: AppTheme.spacing12),
                 _buildSeverityBadge(severity),
                 const SizedBox(width: AppTheme.spacing12),
-                Text('Score: ${score.toStringAsFixed(1)}', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                Text('Score: ${score.toStringAsFixed(1)}',
+                    style: const TextStyle(
+                        color: AppTheme.textSecondary, fontSize: 12)),
               ],
             ),
-            subtitle: Text(DateFormat('yyyy-MM-dd HH:mm:ss').format(createdAt.toLocal()), style: const TextStyle(color: AppTheme.textTertiary, fontSize: 12)),
+            subtitle: Text(
+                DateFormat('yyyy-MM-dd HH:mm:ss').format(createdAt.toLocal()),
+                style: const TextStyle(
+                    color: AppTheme.textTertiary, fontSize: 12)),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -209,28 +257,44 @@ class _ThreatResponseScreenState extends State<ThreatResponseScreen> {
                 ),
                 const SizedBox(width: AppTheme.spacing8),
                 TextButton(
-                  onPressed: provider.isActionPending(alertId) ? null : () => _showBlockDialog(context, provider, ip, alertId),
-                  child: provider.isActionPending(alertId) 
-                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Text('Block', style: TextStyle(color: AppTheme.error)),
+                  onPressed: provider.isActionPending(alertId)
+                      ? null
+                      : () => _showBlockDialog(context, provider, ip, alertId),
+                  child: provider.isActionPending(alertId)
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Text('Block',
+                          style: TextStyle(color: AppTheme.error)),
                 ),
                 TextButton(
-                  onPressed: provider.isActionPending(alertId) ? null : () async {
-                    final res = await provider.ignoreThreat(alertId);
-                    if (context.mounted) {
-                      if (res['success'] == true) {
-                        await StateCoordinator(context).afterThreatAction(ThreatActionType.ignore);
-                      }
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content: Text(res['message'] ?? 'Threat ignored'),
-                        backgroundColor: res['success'] == true ? AppTheme.success : AppTheme.error,
-                      ));
-                    }
-                  },
-                  child: const Text('Ignore', style: TextStyle(color: AppTheme.textSecondary)),
+                  onPressed: provider.isActionPending(alertId)
+                      ? null
+                      : () async {
+                          final res = await provider.ignoreThreat(alertId);
+                          if (context.mounted) {
+                            if (res['success'] == true) {
+                              await StateCoordinator(context)
+                                  .afterThreatAction(ThreatActionType.ignore);
+                            }
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: Text(res['message'] ?? 'Threat ignored'),
+                              backgroundColor: res['success'] == true
+                                  ? AppTheme.success
+                                  : AppTheme.error,
+                            ));
+                          }
+                        },
+                  child: const Text('Ignore',
+                      style: TextStyle(color: AppTheme.textSecondary)),
                 ),
                 IconButton(
-                  icon: Icon(isExpanded ? LucideIcons.chevronUp : LucideIcons.chevronDown, color: AppTheme.textSecondary),
+                  icon: Icon(
+                      isExpanded
+                          ? LucideIcons.chevronUp
+                          : LucideIcons.chevronDown,
+                      color: AppTheme.textSecondary),
                   onPressed: () => provider.toggleExpanded(alertId),
                 ),
               ],
@@ -245,40 +309,62 @@ class _ThreatResponseScreenState extends State<ThreatResponseScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(threat['summary'] ?? '', style: const TextStyle(color: AppTheme.textPrimary)),
+                  Text(threat['summary'] ?? '',
+                      style: const TextStyle(color: AppTheme.textPrimary)),
                   const SizedBox(height: AppTheme.spacing12),
                   if (threat['explanation'] != null)
-                    ...((threat['explanation'] as List<dynamic>).map((e) => Padding(
-                          padding: const EdgeInsets.only(bottom: 4),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('• ', style: TextStyle(color: AppTheme.textSecondary)),
-                              Expanded(child: Text(e.toString(), style: const TextStyle(color: AppTheme.textSecondary))),
-                            ],
-                          ),
-                        ))),
+                    ...((threat['explanation'] as List<dynamic>)
+                        .map((e) => Padding(
+                              padding: const EdgeInsets.only(bottom: 4),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('• ',
+                                      style: TextStyle(
+                                          color: AppTheme.textSecondary)),
+                                  Expanded(
+                                      child: Text(e.toString(),
+                                          style: const TextStyle(
+                                              color: AppTheme.textSecondary))),
+                                ],
+                              ),
+                            ))),
                   const SizedBox(height: AppTheme.spacing16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       ElevatedButton(
-                        onPressed: provider.isActionPending(alertId) ? null : () async {
-                          final res = await provider.resolveThreat(alertId);
-                          if (context.mounted) {
-                            if (res['success'] == true) {
-                              await StateCoordinator(context).afterThreatAction(ThreatActionType.resolve);
-                            }
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                              content: Text(res['message'] ?? 'Threat resolved'),
-                              backgroundColor: res['success'] == true ? AppTheme.success : AppTheme.error,
-                            ));
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(backgroundColor: AppTheme.success),
+                        onPressed: provider.isActionPending(alertId)
+                            ? null
+                            : () async {
+                                final res =
+                                    await provider.resolveThreat(alertId);
+                                if (context.mounted) {
+                                  if (res['success'] == true) {
+                                    await StateCoordinator(context)
+                                        .afterThreatAction(
+                                            ThreatActionType.resolve);
+                                  }
+                                  ScaffoldMessenger.of(context)
+                                      .showSnackBar(SnackBar(
+                                    content: Text(
+                                        res['message'] ?? 'Threat resolved'),
+                                    backgroundColor: res['success'] == true
+                                        ? AppTheme.success
+                                        : AppTheme.error,
+                                  ));
+                                }
+                              },
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.success),
                         child: provider.isActionPending(alertId)
-                            ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                            : const Text('Mark Resolved', style: TextStyle(color: Colors.white)),
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white))
+                            : const Text('Mark Resolved',
+                                style: TextStyle(color: Colors.white)),
                       ),
                     ],
                   )
@@ -305,11 +391,14 @@ class _ThreatResponseScreenState extends State<ThreatResponseScreen> {
         borderRadius: BorderRadius.circular(AppTheme.radiusSm),
         border: Border.all(color: color.withOpacity(0.3)),
       ),
-      child: Text(severity, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold)),
+      child: Text(severity,
+          style: TextStyle(
+              color: color, fontSize: 12, fontWeight: FontWeight.bold)),
     );
   }
 
-  Widget _buildActionHistorySection(BuildContext context, ThreatResponseProvider provider) {
+  Widget _buildActionHistorySection(
+      BuildContext context, ThreatResponseProvider provider) {
     return Container(
       padding: const EdgeInsets.all(AppTheme.spacing24),
       decoration: BoxDecoration(
@@ -322,12 +411,18 @@ class _ThreatResponseScreenState extends State<ThreatResponseScreen> {
         children: [
           Row(
             children: [
-              const Icon(LucideIcons.history, color: AppTheme.primary, size: 20),
+              const Icon(LucideIcons.history,
+                  color: AppTheme.primary, size: 20),
               const SizedBox(width: AppTheme.spacing12),
-              const Text('Action History', style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.bold)),
+              const Text('Action History',
+                  style: TextStyle(
+                      color: AppTheme.textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold)),
               const Spacer(),
               IconButton(
-                icon: const Icon(LucideIcons.refreshCw, color: AppTheme.textSecondary, size: 18),
+                icon: const Icon(LucideIcons.refreshCw,
+                    color: AppTheme.textSecondary, size: 18),
                 onPressed: () => provider.fetchActionHistory(),
               ),
             ],
@@ -340,9 +435,11 @@ class _ThreatResponseScreenState extends State<ThreatResponseScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(LucideIcons.shieldCheck, color: AppTheme.success, size: 32),
+                    Icon(LucideIcons.shieldCheck,
+                        color: AppTheme.success, size: 32),
                     SizedBox(height: 12),
-                    Text('No action history', style: TextStyle(color: AppTheme.textSecondary)),
+                    Text('No action history',
+                        style: TextStyle(color: AppTheme.textSecondary)),
                   ],
                 ),
               ),
@@ -357,47 +454,80 @@ class _ThreatResponseScreenState extends State<ThreatResponseScreen> {
                 final isBlock = action.action == 'BLOCK';
                 return ListTile(
                   leading: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: isBlock ? AppTheme.error.withOpacity(0.1) : AppTheme.success.withOpacity(0.1),
+                      color: isBlock
+                          ? AppTheme.error.withOpacity(0.1)
+                          : AppTheme.success.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                      border: Border.all(color: isBlock ? AppTheme.error.withOpacity(0.3) : AppTheme.success.withOpacity(0.3)),
+                      border: Border.all(
+                          color: isBlock
+                              ? AppTheme.error.withOpacity(0.3)
+                              : AppTheme.success.withOpacity(0.3)),
                     ),
-                    child: Text(action.action, style: TextStyle(color: isBlock ? AppTheme.error : AppTheme.success, fontSize: 10, fontWeight: FontWeight.bold)),
+                    child: Text(action.action,
+                        style: TextStyle(
+                            color: isBlock ? AppTheme.error : AppTheme.success,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold)),
                   ),
                   title: Row(
                     children: [
-                      Text(action.ip, style: const TextStyle(color: AppTheme.textPrimary, fontFamily: 'monospace')),
+                      Text(action.ip,
+                          style: const TextStyle(
+                              color: AppTheme.textPrimary,
+                              fontFamily: 'monospace')),
                       const SizedBox(width: 8),
                       if (action.enforced == true)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                          decoration: BoxDecoration(color: AppTheme.success.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
-                          child: const Text('OS ENFORCED', style: TextStyle(color: AppTheme.success, fontSize: 8, fontWeight: FontWeight.bold)),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 4, vertical: 2),
+                          decoration: BoxDecoration(
+                              color: AppTheme.success.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(4)),
+                          child: const Text('OS ENFORCED',
+                              style: TextStyle(
+                                  color: AppTheme.success,
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.bold)),
                         ),
                     ],
                   ),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(action.reason ?? 'No reason provided', style: const TextStyle(color: AppTheme.textSecondary)),
+                      Text(action.reason ?? 'No reason provided',
+                          style:
+                              const TextStyle(color: AppTheme.textSecondary)),
                       if (action.note != null) ...[
                         const SizedBox(height: 4),
-                        Text('Note: ${action.note}', style: const TextStyle(color: AppTheme.textTertiary, fontStyle: FontStyle.italic)),
+                        Text('Note: ${action.note}',
+                            style: const TextStyle(
+                                color: AppTheme.textTertiary,
+                                fontStyle: FontStyle.italic)),
                       ],
                       if (action.analystName != null) ...[
                         const SizedBox(height: 4),
                         Row(
                           children: [
-                            const Icon(LucideIcons.user, size: 12, color: AppTheme.textTertiary),
+                            const Icon(LucideIcons.user,
+                                size: 12, color: AppTheme.textTertiary),
                             const SizedBox(width: 4),
-                            Text(action.analystName!, style: const TextStyle(color: AppTheme.textTertiary, fontSize: 12)),
+                            Text(action.analystName!,
+                                style: const TextStyle(
+                                    color: AppTheme.textTertiary,
+                                    fontSize: 12)),
                           ],
                         ),
                       ],
                     ],
                   ),
-                  trailing: Text(DateFormat('yyyy-MM-dd HH:mm').format(action.createdAt.toLocal()), style: const TextStyle(color: AppTheme.textTertiary, fontSize: 12)),
+                  trailing: Text(
+                      DateFormat('yyyy-MM-dd HH:mm')
+                          .format(action.createdAt.toLocal()),
+                      style: const TextStyle(
+                          color: AppTheme.textTertiary, fontSize: 12)),
                 );
               },
             ),
@@ -406,15 +536,18 @@ class _ThreatResponseScreenState extends State<ThreatResponseScreen> {
     );
   }
 
-  void _showBlockDialog(BuildContext context, ThreatResponseProvider provider, String ip, String alertId) {
+  void _showBlockDialog(BuildContext context, ThreatResponseProvider provider,
+      String ip, String alertId) {
     final reasonController = TextEditingController();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.bgSecondary,
-        title: const Text('Block IP', style: TextStyle(color: AppTheme.textPrimary)),
+        title: const Text('Block IP',
+            style: TextStyle(color: AppTheme.textPrimary)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
-          Text('Block $ip from all network access?', style: const TextStyle(color: AppTheme.textSecondary)),
+          Text('Block $ip from all network access?',
+              style: const TextStyle(color: AppTheme.textSecondary)),
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.all(8),
@@ -425,7 +558,8 @@ class _ThreatResponseScreenState extends State<ThreatResponseScreen> {
             ),
             child: const Row(
               children: [
-                Icon(Icons.warning_amber_rounded, color: AppTheme.warning, size: 16),
+                Icon(Icons.warning_amber_rounded,
+                    color: AppTheme.warning, size: 16),
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -444,29 +578,37 @@ class _ThreatResponseScreenState extends State<ThreatResponseScreen> {
               labelText: 'Reason',
               labelStyle: TextStyle(color: AppTheme.textSecondary),
               border: OutlineInputBorder(),
-              enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: AppTheme.borderPrimary)),
+              enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: AppTheme.borderPrimary)),
             ),
           ),
         ]),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () async {
-              final reason = reasonController.text.isEmpty ? 'Blocked manually' : reasonController.text;
+              final reason = reasonController.text.isEmpty
+                  ? 'Blocked manually'
+                  : reasonController.text;
               Navigator.pop(ctx);
               final res = await provider.blockIP(ip, reason, alertId);
               if (context.mounted) {
                 if (res['success'] == true) {
-                  await StateCoordinator(context).afterThreatAction(ThreatActionType.block);
+                  await StateCoordinator(context)
+                      .afterThreatAction(ThreatActionType.block);
                 }
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                   content: Text(res['message'] ?? 'Action completed'),
-                  backgroundColor: res['success'] == true ? AppTheme.success : AppTheme.error,
+                  backgroundColor: res['success'] == true
+                      ? AppTheme.success
+                      : AppTheme.error,
                 ));
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.error),
-            child: const Text('Confirm Block', style: TextStyle(color: Colors.white)),
+            child: const Text('Confirm Block',
+                style: TextStyle(color: Colors.white)),
           ),
         ],
       ),

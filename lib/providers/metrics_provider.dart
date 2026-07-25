@@ -1,10 +1,8 @@
 import 'package:cybersentinel/core/api/clients/local_agent_client.dart';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'session_cleanup_coordinator.dart';
 import '../models/global_metrics.dart';
-import '../services/api_service.dart';
 import '../services/websocket_service.dart';
 
 class MetricsProvider extends ChangeNotifier {
@@ -33,9 +31,7 @@ class MetricsProvider extends ChangeNotifier {
 
   void _listenToWebSocket() {
     _wsSubscription = WebSocketService().statsUpdateStream.listen((event) {
-      if (event['type'] == 'stats_update') {
-        _handleWsStatsUpdate(event['data']);
-      }
+      _handleWsStatsUpdate(event);
     });
   }
 
@@ -64,10 +60,12 @@ class MetricsProvider extends ChangeNotifier {
 
       if (kDebugMode) {
         print('=== VERIFICATION LOG: Global Metrics ===');
-        print('Source Dashboard API: snapshot=${dashboardStats['snapshot']}, period=${dashboardStats['period']}, score=${dashboardStats['threat_score']}');
-        print('Final KPIs -> Active: ${nextMetrics.activeThreats}, Critical: ${nextMetrics.criticalThreats}, Score: ${nextMetrics.threatScore}');
+        print(
+            'Source Dashboard API: snapshot=${dashboardStats['snapshot']}, period=${dashboardStats['period']}, score=${dashboardStats['threat_score']}');
+        print(
+            'Final KPIs -> Active: ${nextMetrics.activeThreats}, Critical: ${nextMetrics.criticalThreats}, Score: ${nextMetrics.threatScore}');
       }
-      
+
       _metrics = nextMetrics;
     } catch (e) {
       _error = e.toString();
@@ -83,9 +81,11 @@ class MetricsProvider extends ChangeNotifier {
     // Attempt to merge WS stats into global metrics.
     // WS provides some but not all of the threat stats.
     final nextMetrics = _metrics.copyWith(
-      activeThreats: stats['open_alerts'] != null && stats['investigating_alerts'] != null 
-          ? (stats['open_alerts'] as int) + (stats['investigating_alerts'] as int) 
-          : _metrics.activeThreats,
+      activeThreats:
+          stats['open_alerts'] != null && stats['investigating_alerts'] != null
+              ? (stats['open_alerts'] as int) +
+                  (stats['investigating_alerts'] as int)
+              : _metrics.activeThreats,
       threatScore: stats['threat_score'] ?? _metrics.threatScore,
       totalPackets: stats['total_packets_count'] ?? _metrics.totalPackets,
       suspiciousIps: stats['suspicious_ips_count'] ?? _metrics.suspiciousIps,

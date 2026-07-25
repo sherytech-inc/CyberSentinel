@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'session_cleanup_coordinator.dart';
 import '../models/response_action.dart';
-import '../services/api_service.dart';
 import '../services/websocket_service.dart';
 
 class ThreatResponseProvider extends ChangeNotifier {
@@ -89,7 +88,9 @@ class ThreatResponseProvider extends ChangeNotifier {
       final data = await LocalAgentClient.getResponseHistory();
       final items = data['items'] as List<dynamic>?;
       if (items != null) {
-        _actionHistory = items.map((e) => ResponseAction.fromJson(e as Map<String, dynamic>)).toList();
+        _actionHistory = items
+            .map((e) => ResponseAction.fromJson(e as Map<String, dynamic>))
+            .toList();
       } else {
         _actionHistory = [];
       }
@@ -99,8 +100,10 @@ class ThreatResponseProvider extends ChangeNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> blockIP(String ip, String reason, String alertId) async {
-    if (isActionPending(alertId)) return {'success': false, 'message': 'Action pending'};
+  Future<Map<String, dynamic>> blockIP(
+      String ip, String reason, String alertId) async {
+    if (isActionPending(alertId))
+      return {'success': false, 'message': 'Action pending'};
     _pendingActions.add(alertId);
     notifyListeners();
     try {
@@ -109,8 +112,8 @@ class ThreatResponseProvider extends ChangeNotifier {
         return {'success': false, 'message': res['message']};
       }
       return {
-        'success': true, 
-        'message': res['message'] ?? 'Action recorded', 
+        'success': true,
+        'message': res['message'] ?? 'Action recorded',
         'status': res['status'] ?? 'recorded_only'
       };
     } catch (e) {
@@ -121,14 +124,21 @@ class ThreatResponseProvider extends ChangeNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> unblockIP(String ip, String reason, String alertId) async {
-    if (isActionPending(alertId)) return {'success': false, 'message': 'Action pending'};
+  Future<Map<String, dynamic>> unblockIP(
+      String ip, String reason, String alertId) async {
+    if (isActionPending(alertId))
+      return {'success': false, 'message': 'Action pending'};
     _pendingActions.add(alertId);
     notifyListeners();
     try {
       final res = await LocalAgentClient.responseUnblockIP(ip, reason: reason);
-      if (res['error'] == true) return {'success': false, 'message': res['message']};
-      return {'success': true, 'message': res['message'] ?? 'Action recorded', 'status': res['status']};
+      if (res['error'] == true)
+        return {'success': false, 'message': res['message']};
+      return {
+        'success': true,
+        'message': res['message'] ?? 'Action recorded',
+        'status': res['status']
+      };
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     } finally {
@@ -138,12 +148,14 @@ class ThreatResponseProvider extends ChangeNotifier {
   }
 
   Future<Map<String, dynamic>> investigateThreat(String alertId) async {
-    if (isActionPending(alertId)) return {'success': false, 'message': 'Action pending'};
+    if (isActionPending(alertId))
+      return {'success': false, 'message': 'Action pending'};
     _pendingActions.add(alertId);
     notifyListeners();
     try {
       final res = await LocalAgentClient.investigateThreat(alertId);
-      if (res['error'] == true) return {'success': false, 'message': res['message']};
+      if (res['error'] == true)
+        return {'success': false, 'message': res['message']};
       return {'success': true, 'message': 'Investigation started'};
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -154,12 +166,14 @@ class ThreatResponseProvider extends ChangeNotifier {
   }
 
   Future<Map<String, dynamic>> resolveThreat(String alertId) async {
-    if (isActionPending(alertId)) return {'success': false, 'message': 'Action pending'};
+    if (isActionPending(alertId))
+      return {'success': false, 'message': 'Action pending'};
     _pendingActions.add(alertId);
     notifyListeners();
     try {
       final res = await LocalAgentClient.resolveThreat(alertId);
-      if (res['error'] == true) return {'success': false, 'message': res['message']};
+      if (res['error'] == true)
+        return {'success': false, 'message': res['message']};
       return {'success': true, 'message': 'Alert resolved successfully'};
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -170,12 +184,14 @@ class ThreatResponseProvider extends ChangeNotifier {
   }
 
   Future<Map<String, dynamic>> ignoreThreat(String alertId) async {
-    if (isActionPending(alertId)) return {'success': false, 'message': 'Action pending'};
+    if (isActionPending(alertId))
+      return {'success': false, 'message': 'Action pending'};
     _pendingActions.add(alertId);
     notifyListeners();
     try {
       final res = await LocalAgentClient.ignoreThreat(alertId);
-      if (res['error'] == true) return {'success': false, 'message': res['message']};
+      if (res['error'] == true)
+        return {'success': false, 'message': res['message']};
       return {'success': true, 'message': 'Alert ignored'};
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -225,7 +241,8 @@ class ThreatResponseProvider extends ChangeNotifier {
     final ws = WebSocketService();
     _newThreatSub = ws.newThreatStream.listen((_) => fetchThreatQueue());
     _alertUpdatedSub = ws.alertUpdatedStream.listen((_) => fetchThreatQueue());
-    _alertResolvedSub = ws.alertResolvedStream.listen((_) => fetchThreatQueue());
+    _alertResolvedSub =
+        ws.alertResolvedStream.listen((_) => fetchThreatQueue());
   }
 
   @override

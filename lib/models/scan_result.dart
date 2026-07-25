@@ -2,23 +2,41 @@ class ScanResult {
   final String target;
   final String scanType;
   final ScanStatus status;
+  final String verdict;
   final String message;
   final ScanThreatLevel threatLevel;
   final int enginesDetected;
   final int totalEngines;
+  final int malicious;
+  final int suspicious;
+  final int harmless;
+  final int undetected;
+  final String provider;
+  final bool providerContacted;
+  final String? analysisId;
+  final DateTime? scannedAt;
 
   ScanResult({
     required this.target,
     required this.scanType,
     required this.status,
+    required this.verdict,
     required this.message,
     required this.threatLevel,
     required this.enginesDetected,
     required this.totalEngines,
+    required this.malicious,
+    required this.suspicious,
+    required this.harmless,
+    required this.undetected,
+    required this.provider,
+    required this.providerContacted,
+    this.analysisId,
+    this.scannedAt,
   });
 
   factory ScanResult.fromJson(Map<String, dynamic> json) {
-    final statusStr = (json['status'] as String? ?? 'unavailable').toLowerCase();
+    final statusStr = json['status']?.toString().toLowerCase() ?? 'unavailable';
     ScanStatus parsedStatus;
     switch (statusStr) {
       case 'completed':
@@ -39,14 +57,20 @@ class ScanResult {
       case 'invalid_target':
         parsedStatus = ScanStatus.invalidTarget;
         break;
+      case 'file_too_large':
+        parsedStatus = ScanStatus.fileTooLarge;
+        break;
+      case 'unsupported_file':
+        parsedStatus = ScanStatus.unsupportedFile;
+        break;
       default:
         parsedStatus = ScanStatus.unavailable;
     }
 
-    final malicious = json['malicious'] as int? ?? 0;
-    final suspicious = json['suspicious'] as int? ?? 0;
-    final harmless = json['harmless'] as int? ?? 0;
-    final undetected = json['undetected'] as int? ?? 0;
+    final malicious = (json['malicious'] as num?)?.toInt() ?? 0;
+    final suspicious = (json['suspicious'] as num?)?.toInt() ?? 0;
+    final harmless = (json['harmless'] as num?)?.toInt() ?? 0;
+    final undetected = (json['undetected'] as num?)?.toInt() ?? 0;
     final total = malicious + suspicious + harmless + undetected;
 
     ScanThreatLevel level = ScanThreatLevel.clean;
@@ -66,10 +90,19 @@ class ScanResult {
       target: json['target'] as String? ?? 'Unknown',
       scanType: json['scan_type'] as String? ?? 'url',
       status: parsedStatus,
-      message: json['message'] as String? ?? '',
+      verdict: json['verdict']?.toString() ?? 'unknown',
+      message: json['message'] is String ? json['message'] as String : '',
       threatLevel: level,
       enginesDetected: malicious + suspicious,
       totalEngines: total,
+      malicious: malicious,
+      suspicious: suspicious,
+      harmless: harmless,
+      undetected: undetected,
+      provider: json['provider']?.toString() ?? 'VIRUSTOTAL',
+      providerContacted: json['provider_contacted'] == true,
+      analysisId: json['analysis_id']?.toString(),
+      scannedAt: DateTime.tryParse(json['scanned_at']?.toString() ?? ''),
     );
   }
 }
@@ -82,6 +115,8 @@ enum ScanStatus {
   quotaExceeded,
   unavailable,
   invalidTarget,
+  fileTooLarge,
+  unsupportedFile,
 }
 
 enum ScanThreatLevel {

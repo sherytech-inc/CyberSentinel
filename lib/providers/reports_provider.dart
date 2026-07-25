@@ -2,7 +2,6 @@ import 'package:cybersentinel/core/api/clients/cloud_control_plane_client.dart';
 import 'session_cleanup_coordinator.dart';
 import 'package:flutter/foundation.dart';
 import '../models/report_kpis.dart';
-import '../services/api_service.dart';
 import '../services/websocket_service.dart';
 
 class ReportsProvider extends ChangeNotifier {
@@ -55,7 +54,8 @@ class ReportsProvider extends ChangeNotifier {
     }
 
     try {
-      final data = await CloudControlPlaneClient.getReportingDashboard(_timeRange);
+      final data =
+          await CloudControlPlaneClient.getReportingDashboard(_timeRange);
       if (data['error'] == true) {
         debugPrint('Error fetching reports dashboard: ${data['message']}');
       } else {
@@ -75,7 +75,8 @@ class ReportsProvider extends ChangeNotifier {
     try {
       final data = await CloudControlPlaneClient.getReportSnapshots();
       if (data['error'] != true && data['data'] != null) {
-        _snapshots = data['data']; // Assuming array is in 'data' or the response is a list
+        _snapshots = data[
+            'data']; // Assuming array is in 'data' or the response is a list
       } else if (data['items'] != null) {
         _snapshots = data['items'];
       }
@@ -88,9 +89,10 @@ class ReportsProvider extends ChangeNotifier {
   Future<void> createSnapshot() async {
     _isSnapshotGenerating = true;
     notifyListeners();
-    
+
     try {
-      final result = await CloudControlPlaneClient.createReportSnapshot(_timeRange);
+      final result =
+          await CloudControlPlaneClient.createReportSnapshot(_timeRange);
       if (result['error'] != true) {
         await fetchSnapshots();
       }

@@ -36,6 +36,27 @@ void main() {
       final p = makePacket(status: PacketStatus.malicious);
       expect(p.mlClassification, 'MALICIOUS');
     });
+
+    test('status unknown returns PENDING', () {
+      final p = makePacket(status: PacketStatus.unknown);
+      expect(p.mlClassification, 'PENDING');
+    });
+  });
+
+  test('pending live DTO is not classified as benign', () {
+    final packet = Packet.fromJson({
+      'id': 'live-1',
+      'source_ip': '192.168.0.7',
+      'destination_port': 443,
+      'protocol': 'TCP',
+      'packet_size': 128,
+      'ml_prediction': 'Pending',
+      'severity': 'Analysis pending',
+      'captured_at': '2026-07-20T23:17:52Z',
+    });
+
+    expect(packet.status, PacketStatus.unknown);
+    expect(packet.mlClassification, 'PENDING');
   });
 
   group('decisionSeverity', () {

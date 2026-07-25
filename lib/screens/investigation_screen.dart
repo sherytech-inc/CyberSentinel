@@ -51,7 +51,8 @@ class _InvestigationScreenState extends State<InvestigationScreen> {
       await _fetchData();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to add note: $e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Failed to add note: $e')));
       }
     }
   }
@@ -67,46 +68,52 @@ class _InvestigationScreenState extends State<InvestigationScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: AppTheme.bgSecondary,
-        title: const Text('Incident Investigation', style: TextStyle(color: AppTheme.textPrimary)),
+        title: const Text('Incident Investigation',
+            style: TextStyle(color: AppTheme.textPrimary)),
         leading: IconButton(
           icon: const Icon(LucideIcons.arrowLeft, color: AppTheme.textPrimary),
           onPressed: () => context.pop(),
         ),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+          ? const Center(
+              child: CircularProgressIndicator(color: AppTheme.primary))
           : _explanation == null
-              ? const Center(child: Text('Alert details not found.', style: TextStyle(color: AppTheme.textSecondary)))
-                : SingleChildScrollView(
-                    padding: const EdgeInsets.all(AppTheme.spacing24),
-                    child: AppTheme.isMobile(context)
-                        ? Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (!_showAIExplanation) _buildAIPromptButton(),
-                              if (_showAIExplanation) _buildAIExplanationSection(),
-                              const SizedBox(height: AppTheme.spacing24),
-                              _buildNotesSection(),
-                            ],
-                          )
-                        : Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                flex: 2, 
+              ? const Center(
+                  child: Text('Alert details not found.',
+                      style: TextStyle(color: AppTheme.textSecondary)))
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(AppTheme.spacing24),
+                  child: AppTheme.isMobile(context)
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (!_showAIExplanation) _buildAIPromptButton(),
+                            if (_showAIExplanation)
+                              _buildAIExplanationSection(),
+                            const SizedBox(height: AppTheme.spacing24),
+                            _buildNotesSection(),
+                          ],
+                        )
+                      : Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                                flex: 2,
                                 child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    if (!_showAIExplanation) _buildAIPromptButton(),
-                                    if (_showAIExplanation) _buildAIExplanationSection(),
-                                  ]
-                                )
-                              ),
-                              const SizedBox(width: AppTheme.spacing24),
-                              Expanded(flex: 1, child: _buildNotesSection()),
-                            ],
-                          ),
-                  ),
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      if (!_showAIExplanation)
+                                        _buildAIPromptButton(),
+                                      if (_showAIExplanation)
+                                        _buildAIExplanationSection(),
+                                    ])),
+                            const SizedBox(width: AppTheme.spacing24),
+                            Expanded(flex: 1, child: _buildNotesSection()),
+                          ],
+                        ),
+                ),
     );
   }
 
@@ -123,32 +130,41 @@ class _InvestigationScreenState extends State<InvestigationScreen> {
         children: [
           const Icon(LucideIcons.bot, size: 48, color: AppTheme.primary),
           const SizedBox(height: AppTheme.spacing16),
-          const Text('Need deeper insights?', style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text('Need deeper insights?',
+              style: TextStyle(
+                  color: AppTheme.textPrimary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold)),
           const SizedBox(height: AppTheme.spacing8),
-          const Text('Let the CyberSentinel AI Analyst investigate this threat.', style: TextStyle(color: AppTheme.textSecondary)),
+          const Text(
+              'Let the CyberSentinel AI Analyst investigate this threat.',
+              style: TextStyle(color: AppTheme.textSecondary)),
           const SizedBox(height: AppTheme.spacing24),
-          _isAIGenerating 
-            ? const CircularProgressIndicator(color: AppTheme.primary)
-            : ElevatedButton.icon(
-                onPressed: () async {
-                  setState(() => _isAIGenerating = true);
-                  await Future.delayed(const Duration(seconds: 2)); // Simulate AI thinking
-                  if (mounted) {
-                    setState(() {
-                      _isAIGenerating = false;
-                      _showAIExplanation = true;
-                    });
-                  }
-                },
-                icon: const Icon(LucideIcons.sparkles, size: 18),
-                label: const Text('Investigate With AI'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                  textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          _isAIGenerating
+              ? const CircularProgressIndicator(color: AppTheme.primary)
+              : ElevatedButton.icon(
+                  onPressed: () async {
+                    setState(() => _isAIGenerating = true);
+                    await Future.delayed(
+                        const Duration(seconds: 2)); // Simulate AI thinking
+                    if (mounted) {
+                      setState(() {
+                        _isAIGenerating = false;
+                        _showAIExplanation = true;
+                      });
+                    }
+                  },
+                  icon: const Icon(LucideIcons.sparkles, size: 18),
+                  label: const Text('Investigate With AI'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 32, vertical: 16),
+                    textStyle: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
                 ),
-              ),
         ],
       ),
     );
@@ -164,7 +180,11 @@ class _InvestigationScreenState extends State<InvestigationScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Threat Score Breakdown', style: TextStyle(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.bold)),
+        Text('Threat Score Breakdown',
+            style: TextStyle(
+                color: AppTheme.textPrimary,
+                fontSize: 20,
+                fontWeight: FontWeight.bold)),
         const SizedBox(height: AppTheme.spacing16),
         Container(
           padding: const EdgeInsets.all(AppTheme.spacing24),
@@ -176,16 +196,23 @@ class _InvestigationScreenState extends State<InvestigationScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildScoreBar('Random Forest (Known Signatures)', rf, AppTheme.error),
+              _buildScoreBar(
+                  'Random Forest (Known Signatures)', rf, AppTheme.error),
               const SizedBox(height: AppTheme.spacing16),
-              _buildScoreBar('Isolation Forest (Anomalies)', iso, AppTheme.warning),
+              _buildScoreBar(
+                  'Isolation Forest (Anomalies)', iso, AppTheme.warning),
               const SizedBox(height: AppTheme.spacing16),
-              _buildScoreBar('Threat Intelligence (Reputation)', intel, AppTheme.primary),
+              _buildScoreBar(
+                  'Threat Intelligence (Reputation)', intel, AppTheme.primary),
             ],
           ),
         ),
         const SizedBox(height: AppTheme.spacing24),
-        Text('AI Recommendations', style: TextStyle(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.bold)),
+        Text('AI Recommendations',
+            style: TextStyle(
+                color: AppTheme.textPrimary,
+                fontSize: 20,
+                fontWeight: FontWeight.bold)),
         const SizedBox(height: AppTheme.spacing16),
         Container(
           padding: const EdgeInsets.all(AppTheme.spacing24),
@@ -196,17 +223,23 @@ class _InvestigationScreenState extends State<InvestigationScreen> {
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: recs.map((r) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8.0),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(LucideIcons.check, color: AppTheme.success, size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(child: Text(r.toString(), style: const TextStyle(color: AppTheme.textPrimary))),
-                    ],
-                  ),
-                )).toList(),
+            children: recs
+                .map((r) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(LucideIcons.check,
+                              color: AppTheme.success, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                              child: Text(r.toString(),
+                                  style: const TextStyle(
+                                      color: AppTheme.textPrimary))),
+                        ],
+                      ),
+                    ))
+                .toList(),
           ),
         ),
       ],
@@ -221,7 +254,8 @@ class _InvestigationScreenState extends State<InvestigationScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(label, style: const TextStyle(color: AppTheme.textSecondary)),
-            Text('+${score.toStringAsFixed(1)}', style: TextStyle(color: color, fontWeight: FontWeight.bold)),
+            Text('+${score.toStringAsFixed(1)}',
+                style: TextStyle(color: color, fontWeight: FontWeight.bold)),
           ],
         ),
         const SizedBox(height: 8),
@@ -247,10 +281,15 @@ class _InvestigationScreenState extends State<InvestigationScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Analyst Notes', style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text('Analyst Notes',
+              style: TextStyle(
+                  color: AppTheme.textPrimary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold)),
           const SizedBox(height: AppTheme.spacing16),
           if (_notes.isEmpty)
-            const Text('No notes yet.', style: TextStyle(color: AppTheme.textTertiary))
+            const Text('No notes yet.',
+                style: TextStyle(color: AppTheme.textTertiary))
           else
             ListView.builder(
               shrinkWrap: true,
@@ -269,9 +308,14 @@ class _InvestigationScreenState extends State<InvestigationScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(note['author'] ?? 'Analyst', style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold, fontSize: 12)),
+                      Text(note['author'] ?? 'Analyst',
+                          style: const TextStyle(
+                              color: AppTheme.primary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12)),
                       const SizedBox(height: 4),
-                      Text(note['note'] ?? '', style: const TextStyle(color: AppTheme.textPrimary)),
+                      Text(note['note'] ?? '',
+                          style: const TextStyle(color: AppTheme.textPrimary)),
                     ],
                   ),
                 );
@@ -290,8 +334,10 @@ class _InvestigationScreenState extends State<InvestigationScreen> {
                     filled: true,
                     fillColor: AppTheme.bgPrimary,
                     border: OutlineInputBorder(),
-                    enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: AppTheme.borderPrimary)),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: AppTheme.borderPrimary)),
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   ),
                   onSubmitted: (_) => _addNote(),
                 ),

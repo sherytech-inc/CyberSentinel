@@ -42,11 +42,13 @@ class IntegrationsResponse {
 
   factory IntegrationsResponse.fromJson(Map<String, dynamic> json) {
     return IntegrationsResponse(
-      virustotal: json['virustotal'] != null 
-          ? IntegrationStatus.fromJson(json['virustotal'] as Map<String, dynamic>)
+      virustotal: json['virustotal'] != null
+          ? IntegrationStatus.fromJson(
+              json['virustotal'] as Map<String, dynamic>)
           : _createFallbackStatus('virustotal'),
       abuseipdb: json['abuseipdb'] != null
-          ? IntegrationStatus.fromJson(json['abuseipdb'] as Map<String, dynamic>)
+          ? IntegrationStatus.fromJson(
+              json['abuseipdb'] as Map<String, dynamic>)
           : _createFallbackStatus('abuseipdb'),
       groq: json['groq'] != null
           ? IntegrationStatus.fromJson(json['groq'] as Map<String, dynamic>)

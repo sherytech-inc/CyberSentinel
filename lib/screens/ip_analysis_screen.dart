@@ -37,7 +37,8 @@ class IPAnalysisScreen extends StatelessWidget {
 
   // ── Search Section ─────────────────────────────────────────────────────────
 
-  Widget _buildSearchSection(BuildContext context, ThreatIntelProvider provider) {
+  Widget _buildSearchSection(
+      BuildContext context, ThreatIntelProvider provider) {
     return Container(
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
@@ -152,7 +153,7 @@ class IPAnalysisScreen extends StatelessWidget {
             ),
             SizedBox(height: 16),
             Text(
-              'The Threat Intelligence module requires active API keys for VirusTotal, AbuseIPDB, and GeoIP. It is currently disabled.',
+              'Threat intelligence providers are not configured in the local CyberSentinel service. GeoIP may remain available independently.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 16,
@@ -178,7 +179,8 @@ class IPAnalysisScreen extends StatelessWidget {
               ? Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Malicious: ${response.virustotal.malicious} / ${response.virustotal.totalEngines}'),
+                    Text(
+                        'Malicious: ${response.virustotal.malicious} / ${response.virustotal.totalEngines}'),
                     Text('Suspicious: ${response.virustotal.suspicious}'),
                   ],
                 )
@@ -194,7 +196,8 @@ class IPAnalysisScreen extends StatelessWidget {
               ? Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Confidence Score: ${response.abuseipdb.abuseConfidenceScore}%'),
+                    Text(
+                        'Confidence Score: ${response.abuseipdb.abuseConfidenceScore}%'),
                     Text('Total Reports: ${response.abuseipdb.totalReports}'),
                   ],
                 )
@@ -210,10 +213,15 @@ class IPAnalysisScreen extends StatelessWidget {
               ? Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Location: ${response.geoip.city}, ${response.geoip.country}'),
+                    Text(
+                        'Location: ${response.geoip.city}, ${response.geoip.country}'),
                     Text('ISP: ${response.geoip.isp} (${response.geoip.asn})'),
-                    if (response.geoip.isProxy == true) const Text('Is Proxy: Yes', style: TextStyle(color: AppTheme.warning)),
-                    if (response.geoip.isHosting == true) const Text('Is Hosting: Yes', style: TextStyle(color: AppTheme.info)),
+                    if (response.geoip.isProxy == true)
+                      const Text('Is Proxy: Yes',
+                          style: TextStyle(color: AppTheme.warning)),
+                    if (response.geoip.isHosting == true)
+                      const Text('Is Hosting: Yes',
+                          style: TextStyle(color: AppTheme.info)),
                   ],
                 )
               : null,
@@ -224,10 +232,12 @@ class IPAnalysisScreen extends StatelessWidget {
 
   Widget _buildOverallScore(IntelligenceResponse response) {
     Color color = AppTheme.success;
-    if (response.severity == 'critical' || response.severity == 'high') color = AppTheme.error;
+    if (response.severity == 'critical' || response.severity == 'high')
+      color = AppTheme.error;
     else if (response.severity == 'medium') color = AppTheme.warning;
-    
-    if (response.status != IntelStatus.completed && response.status != IntelStatus.partial) {
+
+    if (response.status != IntelStatus.completed &&
+        response.status != IntelStatus.partial) {
       color = AppTheme.textSecondary;
     }
 
@@ -306,7 +316,6 @@ class IPAnalysisScreen extends StatelessWidget {
         statusColor = AppTheme.error;
         break;
       case IntelProviderStatus.unavailable:
-      default:
         statusIcon = LucideIcons.cloudOff;
         statusColor = AppTheme.error;
         break;
@@ -328,11 +337,13 @@ class IPAnalysisScreen extends StatelessWidget {
               const SizedBox(width: 12),
               Text(
                 title,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: statusColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(16),
@@ -355,7 +366,9 @@ class IPAnalysisScreen extends StatelessWidget {
               ),
             ],
           ),
-          if (message != null && message.isNotEmpty && status != IntelProviderStatus.completed) ...[
+          if (message != null &&
+              message.isNotEmpty &&
+              status != IntelProviderStatus.completed) ...[
             const SizedBox(height: 16),
             Text(
               message,
@@ -383,7 +396,8 @@ class IPAnalysisScreen extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(LucideIcons.triangleAlert, color: AppTheme.error, size: 32),
+          const Icon(LucideIcons.triangleAlert,
+              color: AppTheme.error, size: 32),
           const SizedBox(width: 16),
           Expanded(
             child: Column(

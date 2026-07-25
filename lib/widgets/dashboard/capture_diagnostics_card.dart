@@ -15,7 +15,7 @@ class CaptureDiagnosticsCard extends StatelessWidget {
         final state = diag['state'] as String? ?? 'unknown';
         final interface = diag['config']?['interface'] as String? ?? 'unknown';
         final packetsCaptured = diag['packets_captured'] as int? ?? 0;
-        
+
         final flowsStats = diag['flows'] as Map<String, dynamic>? ?? {};
         final activeFlows = flowsStats['active_flows'] as int? ?? 0;
         final finalizedTotal = flowsStats['finalized_total'] as int? ?? 0;
@@ -44,14 +44,20 @@ class CaptureDiagnosticsCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: isError 
+                      color: isError
                           ? AppTheme.error.withOpacity(0.1)
-                          : (isActive ? AppTheme.success.withOpacity(0.1) : AppTheme.info.withOpacity(0.1)),
+                          : (isActive
+                              ? AppTheme.success.withOpacity(0.1)
+                              : AppTheme.info.withOpacity(0.1)),
                       borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                     ),
                     child: Icon(
                       LucideIcons.activity,
-                      color: isError ? AppTheme.error : (isActive ? AppTheme.success : AppTheme.textSecondary),
+                      color: isError
+                          ? AppTheme.error
+                          : (isActive
+                              ? AppTheme.success
+                              : AppTheme.textSecondary),
                       size: 20,
                     ),
                   ),
@@ -66,16 +72,30 @@ class CaptureDiagnosticsCard extends StatelessWidget {
                   ),
                   const Spacer(),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: isError ? AppTheme.error.withOpacity(0.1) : (isActive ? AppTheme.success.withOpacity(0.1) : AppTheme.bgSecondary),
+                      color: isError
+                          ? AppTheme.error.withOpacity(0.1)
+                          : (isActive
+                              ? AppTheme.success.withOpacity(0.1)
+                              : AppTheme.bgSecondary),
                       borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                      border: Border.all(color: isError ? AppTheme.error : (isActive ? AppTheme.success : AppTheme.borderPrimary)),
+                      border: Border.all(
+                          color: isError
+                              ? AppTheme.error
+                              : (isActive
+                                  ? AppTheme.success
+                                  : AppTheme.borderPrimary)),
                     ),
                     child: Text(
                       state.toUpperCase(),
                       style: TextStyle(
-                        color: isError ? AppTheme.error : (isActive ? AppTheme.success : AppTheme.textSecondary),
+                        color: isError
+                            ? AppTheme.error
+                            : (isActive
+                                ? AppTheme.success
+                                : AppTheme.textSecondary),
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),
@@ -94,12 +114,14 @@ class CaptureDiagnosticsCard extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      const Icon(LucideIcons.triangleAlert, color: AppTheme.error, size: 16),
+                      const Icon(LucideIcons.triangleAlert,
+                          color: AppTheme.error, size: 16),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           errorMsg,
-                          style: const TextStyle(color: AppTheme.error, fontSize: 13),
+                          style: const TextStyle(
+                              color: AppTheme.error, fontSize: 13),
                         ),
                       ),
                     ],
@@ -118,10 +140,13 @@ class CaptureDiagnosticsCard extends StatelessWidget {
               _buildStatRow('Features Extracted', extracted.toString()),
               if (failed > 0) ...[
                 const SizedBox(height: AppTheme.spacing12),
-                _buildStatRow('Extraction Failed', failed.toString(), isError: true),
+                _buildStatRow('Extraction Failed', failed.toString(),
+                    isError: true),
               ],
               const SizedBox(height: AppTheme.spacing12),
-              _buildStatRow('WebSocket Status', provider.isWsConnected ? 'Connected' : 'Disconnected', isError: !provider.isWsConnected),
+              _buildStatRow('WebSocket Status',
+                  provider.isWsConnected ? 'Connected' : 'Disconnected',
+                  isError: !provider.isWsConnected),
             ],
           ),
         );

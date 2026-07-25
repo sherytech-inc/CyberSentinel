@@ -1,7 +1,6 @@
 import 'package:cybersentinel/core/api/clients/local_agent_client.dart';
 import 'package:flutter/material.dart';
 import 'session_cleanup_coordinator.dart';
-import '../services/api_service.dart';
 
 class DemoProvider extends ChangeNotifier {
   bool _isLoading = false;
@@ -71,7 +70,7 @@ class DemoProvider extends ChangeNotifier {
 
   Future<void> resetDemo() async {
     if (_activeRunId == null) return;
-    
+
     _isLoading = true;
     _error = null;
     notifyListeners();

@@ -5,17 +5,27 @@ enum IntelStatus {
   notFound,
   quotaExceeded,
   unavailable,
-  invalidTarget;
+  invalidTarget,
+  failed;
 
   static IntelStatus fromString(String value) {
     switch (value) {
-      case 'completed': return IntelStatus.completed;
-      case 'partial': return IntelStatus.partial;
-      case 'not_configured': return IntelStatus.notConfigured;
-      case 'not_found': return IntelStatus.notFound;
-      case 'quota_exceeded': return IntelStatus.quotaExceeded;
-      case 'invalid_target': return IntelStatus.invalidTarget;
-      default: return IntelStatus.unavailable;
+      case 'completed':
+        return IntelStatus.completed;
+      case 'partial':
+        return IntelStatus.partial;
+      case 'not_configured':
+        return IntelStatus.notConfigured;
+      case 'not_found':
+        return IntelStatus.notFound;
+      case 'quota_exceeded':
+        return IntelStatus.quotaExceeded;
+      case 'invalid_target':
+        return IntelStatus.invalidTarget;
+      case 'failed':
+        return IntelStatus.failed;
+      default:
+        return IntelStatus.unavailable;
     }
   }
 }
@@ -29,11 +39,16 @@ enum IntelProviderStatus {
 
   static IntelProviderStatus fromString(String value) {
     switch (value) {
-      case 'completed': return IntelProviderStatus.completed;
-      case 'not_configured': return IntelProviderStatus.notConfigured;
-      case 'not_found': return IntelProviderStatus.notFound;
-      case 'quota_exceeded': return IntelProviderStatus.quotaExceeded;
-      default: return IntelProviderStatus.unavailable;
+      case 'completed':
+        return IntelProviderStatus.completed;
+      case 'not_configured':
+        return IntelProviderStatus.notConfigured;
+      case 'not_found':
+        return IntelProviderStatus.notFound;
+      case 'quota_exceeded':
+        return IntelProviderStatus.quotaExceeded;
+      default:
+        return IntelProviderStatus.unavailable;
     }
   }
 }
@@ -62,13 +77,13 @@ class VirusTotalIntelResult {
   factory VirusTotalIntelResult.fromJson(Map<String, dynamic> json) {
     return VirusTotalIntelResult(
       status: IntelProviderStatus.fromString(json['status'] ?? 'unavailable'),
-      message: json['message'] as String?,
-      malicious: json['malicious'] as int?,
-      suspicious: json['suspicious'] as int?,
-      harmless: json['harmless'] as int?,
-      undetected: json['undetected'] as int?,
-      totalEngines: json['total_engines'] as int?,
-      lastAnalysisDate: json['last_analysis_date'] as String?,
+      message: json['message'] is String ? json['message'] as String : null,
+      malicious: (json['malicious'] as num?)?.toInt(),
+      suspicious: (json['suspicious'] as num?)?.toInt(),
+      harmless: (json['harmless'] as num?)?.toInt(),
+      undetected: (json['undetected'] as num?)?.toInt(),
+      totalEngines: (json['total_engines'] as num?)?.toInt(),
+      lastAnalysisDate: json['last_analysis_date']?.toString(),
     );
   }
 }
@@ -95,10 +110,10 @@ class AbuseIpDbIntelResult {
   factory AbuseIpDbIntelResult.fromJson(Map<String, dynamic> json) {
     return AbuseIpDbIntelResult(
       status: IntelProviderStatus.fromString(json['status'] ?? 'unavailable'),
-      message: json['message'] as String?,
-      abuseConfidenceScore: json['abuse_confidence_score'] as int?,
-      totalReports: json['total_reports'] as int?,
-      numDistinctUsers: json['num_distinct_users'] as int?,
+      message: json['message'] is String ? json['message'] as String : null,
+      abuseConfidenceScore: (json['abuse_confidence_score'] as num?)?.toInt(),
+      totalReports: (json['total_reports'] as num?)?.toInt(),
+      numDistinctUsers: (json['num_distinct_users'] as num?)?.toInt(),
       isWhitelisted: json['is_whitelisted'] as bool?,
       isTor: json['is_tor'] as bool?,
     );
@@ -133,13 +148,13 @@ class GeoIpIntelResult {
   factory GeoIpIntelResult.fromJson(Map<String, dynamic> json) {
     return GeoIpIntelResult(
       status: IntelProviderStatus.fromString(json['status'] ?? 'unavailable'),
-      message: json['message'] as String?,
-      country: json['country'] as String?,
-      countryCode: json['country_code'] as String?,
-      city: json['city'] as String?,
-      asn: json['asn'] as String?,
-      organization: json['organization'] as String?,
-      isp: json['isp'] as String?,
+      message: json['message'] is String ? json['message'] as String : null,
+      country: json['country']?.toString(),
+      countryCode: json['country_code']?.toString(),
+      city: json['city']?.toString(),
+      asn: json['asn']?.toString(),
+      organization: json['organization']?.toString(),
+      isp: json['isp']?.toString(),
       isProxy: json['is_proxy'] as bool?,
       isHosting: json['is_hosting'] as bool?,
     );
@@ -179,15 +194,23 @@ class IntelligenceResponse {
     return IntelligenceResponse(
       ip: json['ip'] as String? ?? '0.0.0.0',
       status: IntelStatus.fromString(json['status'] ?? 'unavailable'),
-      intelScore: json['intel_score'] as int?,
-      severity: json['severity'] as String?,
-      scoreConfidence: json['score_confidence'] as String?,
-      providersUsed: (json['providers_used'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
-      virustotal: VirusTotalIntelResult.fromJson(json['virustotal'] ?? {}),
-      abuseipdb: AbuseIpDbIntelResult.fromJson(json['abuseipdb'] ?? {}),
-      geoip: GeoIpIntelResult.fromJson(json['geoip'] ?? {}),
-      message: json['message'] as String? ?? '',
-      lookedUpAt: json['looked_up_at'] as String? ?? '',
+      intelScore: (json['intel_score'] as num?)?.toInt(),
+      severity: json['severity']?.toString(),
+      scoreConfidence: json['score_confidence']?.toString(),
+      providersUsed: (json['providers_used'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
+      virustotal: VirusTotalIntelResult.fromJson(json['virustotal'] is Map
+          ? Map<String, dynamic>.from(json['virustotal'])
+          : {}),
+      abuseipdb: AbuseIpDbIntelResult.fromJson(json['abuseipdb'] is Map
+          ? Map<String, dynamic>.from(json['abuseipdb'])
+          : {}),
+      geoip: GeoIpIntelResult.fromJson(
+          json['geoip'] is Map ? Map<String, dynamic>.from(json['geoip']) : {}),
+      message: json['message'] is String ? json['message'] as String : '',
+      lookedUpAt: json['looked_up_at']?.toString() ?? '',
       cached: json['cached'] as bool? ?? false,
     );
   }

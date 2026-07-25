@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'session_cleanup_coordinator.dart';
 import '../models/firewall_log.dart';
-import '../services/api_service.dart';
 
 class FirewallLogsProvider extends ChangeNotifier {
   bool _autoFetch = true;
@@ -44,8 +43,10 @@ class FirewallLogsProvider extends ChangeNotifier {
   int get allowedCount =>
       _logs.where((log) => log.action == FirewallAction.allowed).length;
 
-  List<FirewallLog> get blockedLogs =>
-      _logs.where((log) => log.action == FirewallAction.blocked).take(5).toList();
+  List<FirewallLog> get blockedLogs => _logs
+      .where((log) => log.action == FirewallAction.blocked)
+      .take(5)
+      .toList();
 
   int _currentPage = 1;
   final int _pageSize = 50;
@@ -85,7 +86,7 @@ class FirewallLogsProvider extends ChangeNotifier {
 
       final items = payload['items'] as List<dynamic>? ?? [];
       final total = payload['total'] as int? ?? 0;
-      
+
       final newLogs = items
           .map((item) => FirewallLog.fromJson(item as Map<String, dynamic>))
           .toList();

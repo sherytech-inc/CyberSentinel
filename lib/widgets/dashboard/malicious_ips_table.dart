@@ -42,9 +42,7 @@ class MaliciousIPsTable extends StatelessWidget {
               ),
               const SizedBox(height: AppTheme.spacing24),
               _buildTableHeader(),
-              ...provider.maliciousIPs
-                  .map((ip) => _buildTableRow(ip))
-                  .toList(),
+              ...provider.maliciousIPs.map((ip) => _buildTableRow(ip)).toList(),
             ],
           ),
         );

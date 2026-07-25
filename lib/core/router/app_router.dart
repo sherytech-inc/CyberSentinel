@@ -23,12 +23,14 @@ class AppRouter {
       refreshListenable: authProvider,
       redirect: (context, state) {
         final bool isAuth = authProvider.isAuthenticated;
-        final bool isLoggingIn = state.uri.path == '/login' || state.uri.path == '/forgot-password' || state.uri.path == '/create-account';
+        final bool isLoggingIn = state.uri.path == '/login' ||
+            state.uri.path == '/forgot-password' ||
+            state.uri.path == '/create-account';
 
         if (!isAuth && !isLoggingIn) {
           return '/login';
         }
-        
+
         if (isAuth && isLoggingIn) {
           return '/';
         }

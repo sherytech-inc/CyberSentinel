@@ -13,17 +13,18 @@ class PacketClassification extends StatelessWidget {
       builder: (context, provider, _) {
         final total = provider.normalCount +
             provider.suspiciousCount +
-            provider.maliciousCount;
-        double normalPct = 100.0;
+            provider.maliciousCount +
+            provider.unknownCount;
+        double normalPct = 0.0;
         double suspiciousPct = 0.0;
         double maliciousPct = 0.0;
+        double unknownPct = 0.0;
 
         if (total > 0) {
           normalPct = (provider.normalCount / total) * 100;
           suspiciousPct = (provider.suspiciousCount / total) * 100;
           maliciousPct = (provider.maliciousCount / total) * 100;
-        } else {
-          normalPct = 0.0;
+          unknownPct = (provider.unknownCount / total) * 100;
         }
 
         return Container(
@@ -117,6 +118,19 @@ class PacketClassification extends StatelessWidget {
                                     color: Colors.white,
                                   ),
                                 ),
+                              if (unknownPct > 0)
+                                PieChartSectionData(
+                                  color: AppTheme.textTertiary,
+                                  value: unknownPct,
+                                  showTitle: unknownPct > 5,
+                                  title: '${unknownPct.toStringAsFixed(1)}%',
+                                  radius: 50,
+                                  titleStyle: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
                             ],
                     ),
                   ),
@@ -131,6 +145,21 @@ class PacketClassification extends StatelessWidget {
               const SizedBox(height: AppTheme.spacing12),
               _buildLegendItem('Malicious',
                   '${maliciousPct.toStringAsFixed(1)}%', AppTheme.error),
+              const SizedBox(height: AppTheme.spacing12),
+              _buildLegendItem('Unknown', '${unknownPct.toStringAsFixed(1)}%',
+                  AppTheme.textTertiary),
+              if (!provider.isCurrentSessionVisible &&
+                  provider.lastSession != null) ...[
+                const SizedBox(height: AppTheme.spacing24),
+                const Divider(color: AppTheme.borderPrimary),
+                const SizedBox(height: AppTheme.spacing12),
+                _buildStatusRow('Complete', provider.completePacketsCount),
+                _buildStatusRow('Partial', provider.partialPacketsCount),
+                _buildStatusRow('Failed', provider.failedPacketsCount),
+                _buildStatusRow('Deferred', provider.deferredPacketsCount),
+                _buildStatusRow(
+                    'Not analyzed', provider.notAnalyzedPacketsCount),
+              ],
             ],
           ),
         );
@@ -171,6 +200,28 @@ class PacketClassification extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildStatusRow(String label, int count) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppTheme.spacing8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label,
+              style:
+                  const TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+          Text(
+            count.toString(),
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -51,7 +51,7 @@ class DashboardScreen extends StatelessWidget {
         final captured = _formatCount(dashboard.capturedPacketsCount);
         final analyzed = _formatCount(dashboard.analyzedPacketsCount);
         final pending = _formatCount(dashboard.pendingPacketsCount);
-        final active = dashboard.isMonitoringActive;
+        final active = dashboard.isCurrentSessionVisible;
         final capturedLabel =
             active ? 'Current Session Captured' : 'Last Session Captured';
         final analyzedLabel =

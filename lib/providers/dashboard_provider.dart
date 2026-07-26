@@ -14,11 +14,11 @@ class DashboardProvider extends ChangeNotifier {
   int? _lastSessionThreatScore;
   int? get lastSessionThreatScore => _lastSessionThreatScore;
   int get threatScore =>
-      (isMonitoringActive
+      (isCurrentSessionVisible
           ? _currentSessionThreatScore
           : _lastSessionThreatScore) ??
       0;
-  bool get hasReliableThreatScore => isMonitoringActive
+  bool get hasReliableThreatScore => isCurrentSessionVisible
       ? _currentSessionThreatScore != null
       : _lastSessionThreatScore != null;
   CaptureSessionSummary? _lastSession;
@@ -32,44 +32,38 @@ class DashboardProvider extends ChangeNotifier {
   final Map<String, String> _currentPacketStates = {};
   final Map<String, String> _currentPacketPredictions = {};
   int get totalPacketsCount => capturedPacketsCount;
-  int get capturedPacketsCount => isMonitoringActive
-      ? _currentPacketStates.length
+  int get capturedPacketsCount => isCurrentSessionVisible
+      ? _currentCapturedCount
       : (_lastSession?.captured ?? 0);
-  int get analyzedPacketsCount => isMonitoringActive
-      ? _currentPacketStates.values
-          .where((status) => status == 'complete' || status == 'partial')
-          .length
+  int get analyzedPacketsCount => isCurrentSessionVisible
+      ? completePacketsCount + partialPacketsCount
       : (_lastSession?.analyzed ?? 0);
-  int get completePacketsCount => isMonitoringActive
-      ? _currentPacketStates.values
-          .where((status) => status == 'complete')
-          .length
+  int get completePacketsCount => isCurrentSessionVisible
+      ? _currentPartition.complete
       : (_lastSession?.complete ?? 0);
-  int get partialPacketsCount => isMonitoringActive
-      ? _currentPacketStates.values
-          .where((status) => status == 'partial')
-          .length
+  int get partialPacketsCount => isCurrentSessionVisible
+      ? _currentPartition.partial
       : (_lastSession?.partial ?? 0);
-  int get pendingPacketsCount => isMonitoringActive
-      ? _currentPacketStates.values
-          .where((status) => status == 'pending')
-          .length
+  int get pendingPacketsCount => isCurrentSessionVisible
+      ? (_currentCapturedCount -
+              completePacketsCount -
+              partialPacketsCount -
+              failedPacketsCount -
+              deferredPacketsCount -
+              notAnalyzedPacketsCount)
+          .clamp(0, 1 << 31)
       : 0;
   double get analysisCompletion => capturedPacketsCount == 0
       ? 0
       : analyzedPacketsCount / capturedPacketsCount;
-  int get failedPacketsCount => isMonitoringActive
-      ? _currentPacketStates.values.where((status) => status == 'failed').length
+  int get failedPacketsCount => isCurrentSessionVisible
+      ? _currentPartition.failed
       : (_lastSession?.failed ?? 0);
-  int get deferredPacketsCount => isMonitoringActive
-      ? _currentPacketStates.values
-          .where((status) => status == 'deferred')
-          .length
+  int get deferredPacketsCount => isCurrentSessionVisible
+      ? _currentPartition.deferred
       : (_lastSession?.deferred ?? 0);
-  int get notAnalyzedPacketsCount => isMonitoringActive
-      ? _currentPacketStates.values
-          .where((status) => status == 'cancelled' || status == 'not_analyzed')
-          .length
+  int get notAnalyzedPacketsCount => isCurrentSessionVisible
+      ? _currentPartition.notAnalyzed
       : (_lastSession?.notAnalyzed ?? 0);
 
   int _suspiciousIPsCount = 0;
@@ -78,7 +72,7 @@ class DashboardProvider extends ChangeNotifier {
   // Traffic Data for Real-time Chart
   List<TrafficData> _trafficData = [];
   List<TrafficData> get trafficData =>
-      isMonitoringActive ? _trafficData : _lastSessionTrafficData;
+      isCurrentSessionVisible ? _trafficData : _lastSessionTrafficData;
 
   // Alerts
   List<Alert> _alerts = [];
@@ -92,18 +86,17 @@ class DashboardProvider extends ChangeNotifier {
   int _normalCount = 0;
   int _suspiciousCount = 0;
   int _maliciousCount = 0;
-  int get normalCount =>
-      isMonitoringActive ? _normalCount : (_lastSession?.normal ?? 0);
-  int get suspiciousCount =>
-      isMonitoringActive ? _suspiciousCount : (_lastSession?.suspicious ?? 0);
-  int get maliciousCount =>
-      isMonitoringActive ? _maliciousCount : (_lastSession?.malicious ?? 0);
-  int get unknownCount => isMonitoringActive
-      ? (analyzedPacketsCount -
-              _normalCount -
-              _suspiciousCount -
-              _maliciousCount)
-          .clamp(0, 1 << 31)
+  int get normalCount => isCurrentSessionVisible
+      ? _currentDistribution.normal
+      : (_lastSession?.normal ?? 0);
+  int get suspiciousCount => isCurrentSessionVisible
+      ? _currentDistribution.suspicious
+      : (_lastSession?.suspicious ?? 0);
+  int get maliciousCount => isCurrentSessionVisible
+      ? _currentDistribution.malicious
+      : (_lastSession?.malicious ?? 0);
+  int get unknownCount => isCurrentSessionVisible
+      ? _currentDistribution.unknown
       : (_lastSession?.unknown ?? 0);
 
   String? _currentHighestSeverity;
@@ -124,6 +117,7 @@ class DashboardProvider extends ChangeNotifier {
   Map<String, dynamic> _captureDiagnostics = {};
   Map<String, dynamic> get captureDiagnostics => _captureDiagnostics;
   bool _sessionInProgress = false;
+  String? _currentSessionId;
 
   Timer? _refreshTimer;
   bool _isWsConnected = false;
@@ -132,6 +126,55 @@ class DashboardProvider extends ChangeNotifier {
     final state = _captureDiagnostics['state']?.toString().toLowerCase();
     return state == 'running' || state == 'replay';
   }
+
+  bool get isStopping =>
+      _captureDiagnostics['state']?.toString().toLowerCase() == 'stopping';
+  bool get isCurrentSessionVisible => _sessionInProgress;
+
+  Map<String, dynamic> get _analysisDiagnostics =>
+      _captureDiagnostics['analysis'] as Map<String, dynamic>? ?? const {};
+
+  int _diagnosticInt(String key) =>
+      (_analysisDiagnostics[key] as num?)?.toInt() ?? 0;
+
+  int get _currentCapturedCount {
+    final diagnostics =
+        (_captureDiagnostics['packets_captured'] as num?)?.toInt() ?? 0;
+    return diagnostics > _currentPacketStates.length
+        ? diagnostics
+        : _currentPacketStates.length;
+  }
+
+  _TerminalPartition get _currentPartition {
+    final local = _TerminalPartition(
+      complete: _countLocalState('complete'),
+      partial: _countLocalState('partial'),
+      failed: _countLocalState('failed'),
+      deferred: _countLocalState('deferred'),
+      notAnalyzed: _currentPacketStates.values
+          .where((state) => state == 'cancelled' || state == 'not_analyzed')
+          .length,
+    );
+    final diagnostics = _TerminalPartition(
+      complete: _diagnosticInt('completed_packets'),
+      partial: _diagnosticInt('partial_packets'),
+      failed: _diagnosticInt('failed_packets'),
+      deferred: _diagnosticInt('deferred_packets'),
+      notAnalyzed: _diagnosticInt('cancelled_packets'),
+    );
+    return diagnostics.total >= local.total ? diagnostics : local;
+  }
+
+  int _countLocalState(String state) =>
+      _currentPacketStates.values.where((value) => value == state).length;
+
+  _ClassificationDistribution get _currentDistribution =>
+      _normalizedDistribution(
+        analyzedPacketsCount,
+        _normalCount,
+        _suspiciousCount,
+        _maliciousCount,
+      );
 
   DateTime _lastTrafficUpdate = DateTime.now();
 
@@ -503,10 +546,16 @@ class DashboardProvider extends ChangeNotifier {
     final status = payload['analysis_status']?.toString().toLowerCase() ?? '';
     final packetIds = (payload['packet_ids'] as List<dynamic>? ?? const [])
         .map((id) => id.toString())
-        .where(_currentPacketStates.containsKey)
+        .where((id) => id.isNotEmpty)
         .toSet();
     if (packetIds.isEmpty) return;
     for (final id in packetIds) {
+      final previousStatus = _currentPacketStates[id];
+      if ((previousStatus == 'complete' || previousStatus == 'partial') &&
+          status != 'complete' &&
+          status != 'partial') {
+        _adjustPrediction(_currentPacketPredictions.remove(id), -1);
+      }
       _currentPacketStates[id] = status;
     }
     if (status == 'complete' || status == 'partial') {
@@ -564,8 +613,18 @@ class DashboardProvider extends ChangeNotifier {
   }
 
   void _applyCaptureDiagnostics(Map<String, dynamic> diagnostics) {
-    _captureDiagnostics = Map<String, dynamic>.from(diagnostics);
-    final state = _captureDiagnostics['state']?.toString().toLowerCase();
+    final incoming = Map<String, dynamic>.from(diagnostics);
+    final state = incoming['state']?.toString().toLowerCase();
+    final incomingSessionId = incoming['session_id']?.toString();
+    if (_sessionInProgress &&
+        (state == 'stopped' || state == 'error') &&
+        _currentSessionId != null &&
+        incomingSessionId != null &&
+        incomingSessionId.isNotEmpty &&
+        incomingSessionId != _currentSessionId) {
+      return;
+    }
+    _captureDiagnostics = incoming;
     final beginsSession = state == 'starting' ||
         state == 'running' ||
         state == 'replay' ||
@@ -580,46 +639,42 @@ class DashboardProvider extends ChangeNotifier {
       _suspiciousCount = 0;
       _maliciousCount = 0;
       _currentHighestSeverity = null;
+      _currentSessionId = incomingSessionId == null || incomingSessionId.isEmpty
+          ? null
+          : incomingSessionId;
       _initializeTrafficData();
     } else if (_sessionInProgress && (state == 'stopped' || state == 'error')) {
-      for (final entry in _currentPacketStates.entries.toList()) {
-        if (entry.value == 'pending') {
-          _currentPacketStates[entry.key] = 'not_analyzed';
-        }
-      }
-      final complete = _currentPacketStates.values
-          .where((value) => value == 'complete')
-          .length;
-      final partial = _currentPacketStates.values
-          .where((value) => value == 'partial')
-          .length;
-      final failed = _currentPacketStates.values
-          .where((value) => value == 'failed')
-          .length;
-      final deferred = _currentPacketStates.values
-          .where((value) => value == 'deferred')
-          .length;
-      final notAnalyzed =
-          _currentPacketStates.length - complete - partial - failed - deferred;
+      final captured = _currentCapturedCount;
+      final complete = completePacketsCount;
+      final partial = partialPacketsCount;
+      final failed = failedPacketsCount;
+      final deferred = deferredPacketsCount;
       final analyzed = complete + partial;
+      final notAnalyzed =
+          (captured - analyzed - failed - deferred).clamp(0, 1 << 31);
+      final distribution = _normalizedDistribution(
+        analyzed,
+        _normalCount,
+        _suspiciousCount,
+        _maliciousCount,
+      );
       _lastSession = CaptureSessionSummary(
-        sessionId: _captureDiagnostics['session_id']?.toString() ?? '',
+        sessionId: _currentSessionId ?? incomingSessionId ?? '',
         status: state == 'error' ? 'failed' : 'completed',
         captureMode: 'live',
         interfaceName: _captureDiagnostics['interface']?.toString(),
-        captured: _currentPacketStates.length,
+        captured: captured,
         analyzed: analyzed,
         pending: 0,
         complete: complete,
         partial: partial,
         failed: failed,
         deferred: deferred,
-        notAnalyzed: notAnalyzed.clamp(0, 1 << 31),
-        normal: _normalCount,
-        suspicious: _suspiciousCount,
-        malicious: _maliciousCount,
-        unknown: (analyzed - _normalCount - _suspiciousCount - _maliciousCount)
-            .clamp(0, 1 << 31),
+        notAnalyzed: notAnalyzed,
+        normal: distribution.normal,
+        suspicious: distribution.suspicious,
+        malicious: distribution.malicious,
+        unknown: distribution.unknown,
         lastReliableScore: _currentSessionThreatScore?.toDouble(),
         highestSeverity: analyzed > 0 ? _currentHighestSeverity : null,
       );
@@ -636,14 +691,15 @@ class DashboardProvider extends ChangeNotifier {
         ),
         TrafficData(
           time: 'Final',
-          normal: _normalCount,
-          suspicious: _suspiciousCount,
-          malicious: _maliciousCount,
-          pending: notAnalyzed.clamp(0, 1 << 31),
+          normal: distribution.normal,
+          suspicious: distribution.suspicious,
+          malicious: distribution.malicious,
+          pending: notAnalyzed,
         ),
       ];
       _currentSessionThreatScore = null;
       _sessionInProgress = false;
+      _currentSessionId = null;
     }
   }
 
@@ -702,6 +758,7 @@ class DashboardProvider extends ChangeNotifier {
     _firstStatsReceived = false;
     _captureDiagnostics.clear();
     _sessionInProgress = false;
+    _currentSessionId = null;
     _error = null;
     _isLoading = false;
     _refreshTimer?.cancel();
@@ -722,6 +779,59 @@ class DashboardProvider extends ChangeNotifier {
     _wsAlertResolvedSubscription?.cancel();
     super.dispose();
   }
+}
+
+_ClassificationDistribution _normalizedDistribution(
+  int analyzed,
+  int normal,
+  int suspicious,
+  int malicious,
+) {
+  var remaining = analyzed.clamp(0, 1 << 31);
+  final normalizedNormal = normal.clamp(0, remaining);
+  remaining -= normalizedNormal;
+  final normalizedSuspicious = suspicious.clamp(0, remaining);
+  remaining -= normalizedSuspicious;
+  final normalizedMalicious = malicious.clamp(0, remaining);
+  remaining -= normalizedMalicious;
+  return _ClassificationDistribution(
+    normal: normalizedNormal,
+    suspicious: normalizedSuspicious,
+    malicious: normalizedMalicious,
+    unknown: remaining,
+  );
+}
+
+class _ClassificationDistribution {
+  const _ClassificationDistribution({
+    required this.normal,
+    required this.suspicious,
+    required this.malicious,
+    required this.unknown,
+  });
+
+  final int normal;
+  final int suspicious;
+  final int malicious;
+  final int unknown;
+}
+
+class _TerminalPartition {
+  const _TerminalPartition({
+    required this.complete,
+    required this.partial,
+    required this.failed,
+    required this.deferred,
+    required this.notAnalyzed,
+  });
+
+  final int complete;
+  final int partial;
+  final int failed;
+  final int deferred;
+  final int notAnalyzed;
+
+  int get total => complete + partial + failed + deferred + notAnalyzed;
 }
 
 class TrafficData {

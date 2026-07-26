@@ -11,8 +11,8 @@ class ThreatScoreCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<DashboardProvider>(
       builder: (context, dashboardProvider, _) {
-        final isMonitoringActive = dashboardProvider.isMonitoringActive;
-        final score = isMonitoringActive
+        final showCurrentSession = dashboardProvider.isCurrentSessionVisible;
+        final score = showCurrentSession
             ? dashboardProvider.currentSessionThreatScore
             : dashboardProvider.lastSessionThreatScore;
         final hasScore = score != null;
@@ -77,7 +77,7 @@ class ThreatScoreCard extends StatelessWidget {
               ),
               const SizedBox(height: AppTheme.spacing4),
               Text(
-                isMonitoringActive
+                showCurrentSession
                     ? 'Threat Score'
                     : 'Last Session Threat Score',
                 style: const TextStyle(
@@ -108,10 +108,14 @@ class ThreatScoreCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    isMonitoringActive
+                    showCurrentSession
                         ? (hasScore
-                            ? _getSeverityLabel(displayScore)
-                            : 'Monitoring active — analysis pending')
+                            ? dashboardProvider.isStopping
+                                ? 'Finalizing session'
+                                : _getSeverityLabel(displayScore)
+                            : dashboardProvider.isStopping
+                                ? 'Finalizing session'
+                                : 'Monitoring active — analysis pending')
                         : 'Monitoring inactive',
                     style: const TextStyle(
                       fontSize: 12,
@@ -122,7 +126,7 @@ class ThreatScoreCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       hasScore
-                          ? isMonitoringActive
+                          ? showCurrentSession
                               ? _getRiskDescription(displayScore)
                               : '${_getRiskDescription(displayScore)} — Last completed session'
                           : '',

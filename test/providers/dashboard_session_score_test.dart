@@ -55,7 +55,8 @@ void main() {
     expect(provider.hasReliableThreatScore, isFalse);
   });
 
-  test('repeated stopped diagnostics cannot overwrite retained session score', () {
+  test('repeated stopped diagnostics cannot overwrite retained session score',
+      () {
     provider.applyCaptureDiagnosticsForTesting({'state': 'running'});
     capture('p1');
     provider.applyAnalysisUpdateForTesting({
@@ -180,5 +181,178 @@ void main() {
     expect(provider.analyzedPacketsCount, 0);
     expect(provider.pendingPacketsCount, 0);
     expect(provider.trafficData, isEmpty);
+  });
+
+  test('stopping retains current values until terminal diagnostics arrive', () {
+    provider.applyCaptureDiagnosticsForTesting({
+      'state': 'running',
+      'session_id': 'session-a',
+      'packets_captured': 4,
+      'analysis': {
+        'completed_packets': 1,
+        'partial_packets': 1,
+        'failed_packets': 0,
+        'deferred_packets': 0,
+        'cancelled_packets': 0,
+      },
+    });
+    provider.applyAnalysisUpdateForTesting({
+      'packet_ids': ['p1'],
+      'analysis_status': 'complete',
+      'ml_prediction': 'normal',
+      'threat_score': 19,
+    });
+    provider.applyCaptureDiagnosticsForTesting({
+      'state': 'stopping',
+      'session_id': 'session-a',
+      'packets_captured': 4,
+      'analysis': {
+        'completed_packets': 1,
+        'partial_packets': 1,
+        'failed_packets': 0,
+        'deferred_packets': 0,
+        'cancelled_packets': 0,
+      },
+    });
+
+    expect(provider.isMonitoringActive, isFalse);
+    expect(provider.isCurrentSessionVisible, isTrue);
+    expect(provider.capturedPacketsCount, 4);
+    expect(provider.analyzedPacketsCount, 2);
+    expect(provider.pendingPacketsCount, 2);
+    expect(provider.currentSessionThreatScore, 19);
+    expect(provider.lastSession, isNull);
+  });
+
+  test('terminal diagnostics finalize authoritative counts atomically', () {
+    provider.applyCaptureDiagnosticsForTesting({
+      'state': 'running',
+      'session_id': 'session-a',
+      'packets_captured': 523,
+      'analysis': {
+        'completed_packets': 60,
+        'partial_packets': 13,
+        'failed_packets': 20,
+        'deferred_packets': 34,
+        'cancelled_packets': 0,
+      },
+    });
+    provider.applyAnalysisUpdateForTesting({
+      'packet_ids': ['known-packet'],
+      'analysis_status': 'complete',
+      'ml_prediction': 'normal',
+      'threat_score': 31,
+    });
+    provider.applyCaptureDiagnosticsForTesting({
+      'state': 'stopped',
+      'session_id': 'session-a',
+      'packets_captured': 523,
+      'analysis': {
+        'completed_packets': 60,
+        'partial_packets': 13,
+        'failed_packets': 20,
+        'deferred_packets': 34,
+        'cancelled_packets': 396,
+      },
+    });
+
+    expect(provider.isCurrentSessionVisible, isFalse);
+    expect(provider.capturedPacketsCount, 523);
+    expect(provider.completePacketsCount, 60);
+    expect(provider.partialPacketsCount, 13);
+    expect(provider.analyzedPacketsCount, 73);
+    expect(provider.failedPacketsCount, 20);
+    expect(provider.deferredPacketsCount, 34);
+    expect(provider.notAnalyzedPacketsCount, 396);
+    expect(provider.pendingPacketsCount, 0);
+    expect(
+      provider.completePacketsCount +
+          provider.partialPacketsCount +
+          provider.failedPacketsCount +
+          provider.deferredPacketsCount +
+          provider.notAnalyzedPacketsCount +
+          provider.pendingPacketsCount,
+      provider.capturedPacketsCount,
+    );
+    expect(
+      provider.normalCount +
+          provider.suspiciousCount +
+          provider.maliciousCount +
+          provider.unknownCount,
+      provider.analyzedPacketsCount,
+    );
+  });
+
+  test('empty stopped polling cannot clear a finalized snapshot', () {
+    provider.applyCaptureDiagnosticsForTesting({
+      'state': 'running',
+      'session_id': 'session-a',
+    });
+    capture('p1');
+    provider.applyAnalysisUpdateForTesting({
+      'packet_ids': ['p1'],
+      'analysis_status': 'complete',
+      'ml_prediction': 'normal',
+      'threat_score': 27,
+    });
+    provider.applyCaptureDiagnosticsForTesting({
+      'state': 'stopped',
+      'session_id': 'session-a',
+      'packets_captured': 1,
+      'analysis': {
+        'completed_packets': 1,
+      },
+    });
+
+    for (var i = 0; i < 3; i++) {
+      provider.applyCaptureDiagnosticsForTesting({
+        'state': 'stopped',
+        'packets_captured': 0,
+        'analysis': const {},
+      });
+    }
+
+    expect(provider.capturedPacketsCount, 1);
+    expect(provider.analyzedPacketsCount, 1);
+    expect(provider.lastSessionThreatScore, 27);
+  });
+
+  test('terminal status from another session cannot finalize the new session',
+      () {
+    provider.applyCaptureDiagnosticsForTesting({
+      'state': 'running',
+      'session_id': 'new-session',
+      'packets_captured': 2,
+    });
+    provider.applyCaptureDiagnosticsForTesting({
+      'state': 'stopped',
+      'session_id': 'old-session',
+      'packets_captured': 0,
+    });
+
+    expect(provider.isCurrentSessionVisible, isTrue);
+    expect(provider.capturedPacketsCount, 2);
+    expect(provider.lastSession, isNull);
+  });
+
+  test('analysis updates for unseen raw IDs remain unique and classified once',
+      () {
+    provider.applyCaptureDiagnosticsForTesting({
+      'state': 'running',
+      'packets_captured': 2,
+    });
+    final update = {
+      'packet_ids': ['p1', 'p2', 'p2'],
+      'analysis_status': 'complete',
+      'ml_prediction': 'normal',
+      'threat_score': 11,
+    };
+    provider.applyAnalysisUpdateForTesting(update);
+    provider.applyAnalysisUpdateForTesting(update);
+
+    expect(provider.capturedPacketsCount, 2);
+    expect(provider.analyzedPacketsCount, 2);
+    expect(provider.normalCount, 2);
+    expect(provider.unknownCount, 0);
   });
 }

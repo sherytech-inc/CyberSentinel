@@ -18,6 +18,12 @@ class _InactiveDashboardProvider extends ChangeNotifier
   bool get isMonitoringActive => false;
 
   @override
+  bool get isCurrentSessionVisible => false;
+
+  @override
+  bool get isStopping => false;
+
+  @override
   int get threatScore => 0;
 
   @override
@@ -53,6 +59,9 @@ class _EmptyMetricsProvider extends ChangeNotifier implements MetricsProvider {
 class _ActivePendingDashboardProvider extends _InactiveDashboardProvider {
   @override
   bool get isMonitoringActive => true;
+
+  @override
+  bool get isCurrentSessionVisible => true;
 }
 
 class _StoppedScoredDashboardProvider extends _InactiveDashboardProvider {

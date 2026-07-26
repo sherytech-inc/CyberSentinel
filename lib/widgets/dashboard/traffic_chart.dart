@@ -31,7 +31,7 @@ class TrafficChart extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          provider.isMonitoringActive
+                          provider.isCurrentSessionVisible
                               ? 'Real-Time Network Traffic'
                               : 'Last Session Overview',
                           style: TextStyle(
@@ -42,8 +42,10 @@ class TrafficChart extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          provider.isMonitoringActive
-                              ? 'Packets per update'
+                          provider.isCurrentSessionVisible
+                              ? provider.isStopping
+                                  ? 'Finalizing current-session analysis'
+                                  : 'Packets per update'
                               : 'Final classification and analysis distribution',
                           style: TextStyle(
                             fontSize: 14,
@@ -65,7 +67,7 @@ class TrafficChart extends StatelessWidget {
                         _buildLegendItem('Suspicious', AppTheme.warning),
                         _buildLegendItem('Malicious', AppTheme.error),
                         _buildLegendItem(
-                          provider.isMonitoringActive
+                          provider.isCurrentSessionVisible
                               ? 'Pending'
                               : 'Not analyzed',
                           AppTheme.primary,
@@ -75,7 +77,8 @@ class TrafficChart extends StatelessWidget {
                   ),
                 ],
               ),
-              if (!provider.isMonitoringActive && provider.lastSession != null)
+              if (!provider.isCurrentSessionVisible &&
+                  provider.lastSession != null)
                 Padding(
                   padding: const EdgeInsets.only(top: AppTheme.spacing16),
                   child: Wrap(
@@ -99,7 +102,7 @@ class TrafficChart extends StatelessWidget {
               SizedBox(
                 height: 350,
                 child: () {
-                  if (!provider.isMonitoringActive &&
+                  if (!provider.isCurrentSessionVisible &&
                       provider.lastSession == null) {
                     return const Center(
                       child: Text('No completed session data available',
@@ -112,7 +115,7 @@ class TrafficChart extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            provider.isMonitoringActive
+                            provider.isCurrentSessionVisible
                                 ? 'Monitoring active — collecting traffic'
                                 : 'Waiting for live packet capture',
                             textAlign: TextAlign.center,

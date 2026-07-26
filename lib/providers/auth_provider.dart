@@ -4,7 +4,6 @@ import 'dart:convert';
 import 'package:cybersentinel/core/api/clients/local_agent_client.dart';
 import 'package:cybersentinel/core/sidecar/sidecar_manager_interface.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -12,8 +11,60 @@ import '../models/analyst_profile.dart';
 import '../services/websocket_service.dart';
 import 'session_cleanup_coordinator.dart';
 
+typedef RefreshBootstrapSession = Future<Session?> Function();
+typedef BootstrapWithAccessToken = Future<void> Function(String accessToken);
+
+class AuthSessionExpiredException implements Exception {
+  const AuthSessionExpiredException();
+}
+
+class AuthBootstrapCoordinator {
+  Future<void>? _inFlight;
+
+  bool get isInFlight => _inFlight != null;
+
+  Future<void> run(
+    Session session, {
+    required RefreshBootstrapSession refreshSession,
+    required BootstrapWithAccessToken bootstrap,
+  }) {
+    final active = _inFlight;
+    if (active != null) return active;
+
+    final operation = _run(
+      session,
+      refreshSession: refreshSession,
+      bootstrap: bootstrap,
+    );
+    _inFlight = operation;
+    return operation.whenComplete(() {
+      if (identical(_inFlight, operation)) {
+        _inFlight = null;
+      }
+    });
+  }
+
+  Future<void> _run(
+    Session session, {
+    required RefreshBootstrapSession refreshSession,
+    required BootstrapWithAccessToken bootstrap,
+  }) async {
+    var activeSession = session;
+    if (activeSession.isExpired) {
+      final refreshedSession = await refreshSession();
+      if (refreshedSession == null || refreshedSession.isExpired) {
+        throw const AuthSessionExpiredException();
+      }
+      activeSession = refreshedSession;
+    }
+    await bootstrap(activeSession.accessToken);
+  }
+}
+
 class AuthProvider extends ChangeNotifier {
   final SupabaseClient _supabase = Supabase.instance.client;
+  final AuthBootstrapCoordinator _bootstrapCoordinator =
+      AuthBootstrapCoordinator();
   User? _user;
   AnalystProfile? _profile;
   bool _isLoading = true;
@@ -41,7 +92,7 @@ class AuthProvider extends ChangeNotifier {
           event == AuthChangeEvent.signedIn ||
           event == AuthChangeEvent.tokenRefreshed) {
         if (_user != null) {
-          await _bootstrapProfile(session!.accessToken);
+          await _bootstrapProfileForSession(session!);
         }
       } else if (event == AuthChangeEvent.signedOut) {
         _profile = null;
@@ -61,6 +112,25 @@ class AuthProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     });
+  }
+
+  Future<void> _bootstrapProfileForSession(Session session) async {
+    try {
+      await _bootstrapCoordinator.run(
+        session,
+        refreshSession: () async {
+          try {
+            return (await _supabase.auth.refreshSession()).session;
+          } catch (_) {
+            return null;
+          }
+        },
+        bootstrap: _bootstrapProfile,
+      );
+    } on AuthSessionExpiredException {
+      _profile = null;
+      _error = 'Your session has expired. Please sign in again.';
+    }
   }
 
   Future<void> _bootstrapProfile(String accessToken) async {
@@ -103,27 +173,11 @@ class AuthProvider extends ChangeNotifier {
         return;
       }
 
-      final existingProfile = await _loadExistingProfileDirectly();
-
-      if (existingProfile != null) {
-        _profile = existingProfile;
-        _error = null;
-        return;
-      }
-
       _error = _profileBootstrapMessage(
         statusCode: response.statusCode,
         responseData: responseData,
       );
     } on TimeoutException {
-      final existingProfile = await _loadExistingProfileDirectly();
-
-      if (existingProfile != null) {
-        _profile = existingProfile;
-        _error = null;
-        return;
-      }
-
       _error =
           'The profile service took too long to respond. Please try again.';
     } catch (error) {
@@ -131,16 +185,8 @@ class AuthProvider extends ChangeNotifier {
         debugPrint('Profile bootstrap failed: $error');
       }
 
-      final existingProfile = await _loadExistingProfileDirectly();
-
-      if (existingProfile != null) {
-        _profile = existingProfile;
-        _error = null;
-        return;
-      }
-
       _error =
-          'Your CyberSentinel profile could not be loaded. Please try again.';
+          'The profile service is temporarily unavailable. Please try again.';
     }
   }
 
@@ -155,7 +201,7 @@ class AuthProvider extends ChangeNotifier {
 
     _setLoading(true);
     try {
-      await _bootstrapProfile(session.accessToken);
+      await _bootstrapProfileForSession(session);
     } finally {
       _setLoading(false);
     }
@@ -186,36 +232,6 @@ class AuthProvider extends ChangeNotifier {
     return null;
   }
 
-  Future<AnalystProfile?> _loadExistingProfileDirectly() async {
-    final currentUser = _supabase.auth.currentUser;
-
-    if (currentUser == null) {
-      return null;
-    }
-
-    try {
-      final data = await _supabase
-          .from('profiles')
-          .select('user_id, email, display_name, role, is_active')
-          .eq('user_id', currentUser.id)
-          .maybeSingle();
-
-      if (data == null || data['is_active'] != true) {
-        return null;
-      }
-
-      return AnalystProfile.fromJson(
-        Map<String, dynamic>.from(data),
-      );
-    } catch (error) {
-      if (kDebugMode) {
-        debugPrint('Direct profile lookup failed: $error');
-      }
-
-      return null;
-    }
-  }
-
   String _profileBootstrapMessage({
     required int statusCode,
     required Map<String, dynamic>? responseData,
@@ -223,11 +239,14 @@ class AuthProvider extends ChangeNotifier {
     final detail = responseData?['detail'];
 
     if (statusCode == 401) {
+      if (detail == 'authenticated_email_missing') {
+        return 'The signed-in account does not provide a valid email address.';
+      }
       return 'Your session has expired. Please sign in again.';
     }
 
     if (statusCode == 403) {
-      if (detail is String && detail.toLowerCase().contains('disabled')) {
+      if (detail == 'account_disabled') {
         return 'Your CyberSentinel account is currently disabled.';
       }
 

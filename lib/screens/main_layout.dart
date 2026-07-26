@@ -85,9 +85,11 @@ class MainLayout extends StatelessWidget {
                   const Icon(LucideIcons.triangleAlert,
                       size: 48, color: AppTheme.error),
                   const SizedBox(height: 16),
-                  const Text(
-                    'Your CyberSentinel profile could not be loaded.',
-                    style: TextStyle(
+                  Text(
+                    authState.error ??
+                        'Your CyberSentinel profile could not be loaded.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
                       color: AppTheme.textPrimary,
                       fontSize: 16,
                       fontWeight: FontWeight.w500,

@@ -7,6 +7,7 @@ void main() {
     String? severity,
     double? threatScore,
     String id = 'test-1',
+    String analysisStatus = 'complete',
   }) {
     return Packet(
       id: id,
@@ -18,6 +19,7 @@ void main() {
       timestamp: '12:00:00',
       severity: severity,
       threatScore: threatScore,
+      analysisStatus: analysisStatus,
     );
   }
 
@@ -38,7 +40,10 @@ void main() {
     });
 
     test('status unknown returns PENDING', () {
-      final p = makePacket(status: PacketStatus.unknown);
+      final p = makePacket(
+        status: PacketStatus.unknown,
+        analysisStatus: 'pending',
+      );
       expect(p.mlClassification, 'PENDING');
     });
   });

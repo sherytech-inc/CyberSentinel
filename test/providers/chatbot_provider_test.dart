@@ -51,12 +51,43 @@ void main() {
     expect(provider.sessionId, isNot(oldSession));
   });
 
+  test('clear invalidates an in-flight response', () async {
+    final completer = Completer<Map<String, dynamic>>();
+    final provider = ChatbotProvider(sender: (_, __) => completer.future);
+
+    final request = provider.sendMessage('hello');
+    provider.clear();
+    completer.complete({'response': 'stale response'});
+    await request;
+
+    expect(provider.messages, isEmpty);
+    expect(provider.isLoading, isFalse);
+  });
+
+  test('conversation messages remain bounded', () async {
+    final provider =
+        ChatbotProvider(sender: (_, message) async => {'response': message});
+
+    for (var index = 0; index < 25; index++) {
+      await provider.sendMessage('message-$index');
+    }
+
+    expect(provider.messages.length, ChatbotProvider.maxMessages);
+    expect(provider.messages.last.text, 'message-24');
+    expect(provider.messages.first.text, isNot(contains('message-0')));
+  });
+
   test('suggested questions cover presentation scenarios', () {
     final provider = ChatbotProvider(sender: (_, __) async => {});
     expect(provider.suggestedQuestions,
         contains('Summarize the current capture session.'));
     expect(provider.suggestedQuestions,
         contains('Is monitoring currently active?'));
+    expect(provider.suggestedQuestions,
+        contains('Was threat intelligence available?'));
+    expect(
+        provider.suggestedQuestions, contains('Was this IP actually blocked?'));
+    expect(provider.suggestedQuestions, contains('Can you generate a report?'));
     expect(provider.suggestedQuestions, contains('What action should I take?'));
   });
 }

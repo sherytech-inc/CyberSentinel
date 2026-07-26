@@ -18,15 +18,14 @@ class _AIAnalystScreenState extends State<AIAnalystScreen> {
   final ScrollController _scrollController = ScrollController();
 
   void _scrollToBottom() {
-    if (_scrollController.hasClients) {
-      Future.delayed(const Duration(milliseconds: 100), () {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      });
-    }
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (!mounted || !_scrollController.hasClients) return;
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    });
   }
 
   void _handleSend(BuildContext context, String text) {
@@ -58,7 +57,7 @@ class _AIAnalystScreenState extends State<AIAnalystScreen> {
             ),
             child: Column(
               children: [
-                _buildHeader(),
+                _buildHeader(context),
                 const Divider(height: 1, color: AppTheme.borderPrimary),
                 Expanded(
                   child: Consumer<ChatbotProvider>(
@@ -86,7 +85,7 @@ class _AIAnalystScreenState extends State<AIAnalystScreen> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(AppTheme.spacing16),
       child: Row(
@@ -123,6 +122,19 @@ class _AIAnalystScreenState extends State<AIAnalystScreen> {
               ],
             ),
           ),
+          Consumer<ChatbotProvider>(
+            builder: (context, provider, _) => IconButton(
+              tooltip: 'Clear conversation',
+              onPressed: provider.messages.isEmpty || provider.isLoading
+                  ? null
+                  : provider.clear,
+              icon: const Icon(
+                LucideIcons.trash2,
+                color: AppTheme.textSecondary,
+                size: 18,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -144,20 +156,23 @@ class _AIAnalystScreenState extends State<AIAnalystScreen> {
 
   Widget _buildSuggestedQuestions(
       BuildContext context, ChatbotProvider provider) {
-    return Padding(
-      padding: const EdgeInsets.all(AppTheme.spacing16),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: provider.suggestedQuestions.map((q) {
-          return ActionChip(
-            label: Text(q, style: const TextStyle(fontSize: 13)),
-            backgroundColor: AppTheme.bgPrimary,
-            side: const BorderSide(color: AppTheme.borderPrimary),
-            onPressed:
-                provider.isLoading ? null : () => _handleSend(context, q),
-          );
-        }).toList(),
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxHeight: 150),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppTheme.spacing16),
+        child: Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: provider.suggestedQuestions.map((q) {
+            return ActionChip(
+              label: Text(q, style: const TextStyle(fontSize: 13)),
+              backgroundColor: AppTheme.bgPrimary,
+              side: const BorderSide(color: AppTheme.borderPrimary),
+              onPressed:
+                  provider.isLoading ? null : () => _handleSend(context, q),
+            );
+          }).toList(),
+        ),
       ),
     );
   }

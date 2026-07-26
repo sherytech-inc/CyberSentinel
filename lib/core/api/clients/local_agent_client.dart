@@ -46,10 +46,12 @@ class LocalAgentClient {
   // ── AI Analyst ────────────────────────────────────────────────────────────
   static Future<Map<String, dynamic>> sendCopilotMessage(
       String sessionId, String message) async {
-    return await _post('/api/v1/copilot/chat', body: {
-      'session_id': sessionId,
-      'message': message,
-    });
+    return await _post('/api/v1/copilot/chat',
+        body: {
+          'session_id': sessionId,
+          'message': message,
+        },
+        timeout: const Duration(seconds: 25));
   }
 
   // ── Capture Capabilities ──────────────────────────────────────────────────
@@ -568,14 +570,17 @@ class LocalAgentClient {
     return {'error': true, 'message': 'Unknown error in GET request'};
   }
 
-  static Future<Map<String, dynamic>> _post(String path,
-      {Map<String, dynamic>? body}) async {
+  static Future<Map<String, dynamic>> _post(
+    String path, {
+    Map<String, dynamic>? body,
+    Duration? timeout,
+  }) async {
     try {
       final response = await _sendAuthenticated(
         (headers) => http
             .post(Uri.parse('$_baseUrl$path'),
                 headers: headers, body: body != null ? jsonEncode(body) : null)
-            .timeout(_timeout),
+            .timeout(timeout ?? _timeout),
         allowRefreshRetry: true,
       );
       return _handleResponse(response);

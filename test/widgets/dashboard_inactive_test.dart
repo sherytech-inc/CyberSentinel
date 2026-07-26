@@ -72,6 +72,20 @@ class _StoppedScoredDashboardProvider extends _InactiveDashboardProvider {
   bool get hasReliableThreatScore => true;
 }
 
+class _RecentAlertDashboardProvider extends _InactiveDashboardProvider {
+  @override
+  List<Alert> get alerts => [
+        Alert(
+          id: 'alert-1',
+          title: 'Suspicious',
+          description: 'Source: 198.51.100.8',
+          time: 'Just now',
+          severity: AlertSeverity.high,
+          status: 'RESOLVED',
+        ),
+      ];
+}
+
 void main() {
   late DashboardProvider dashboardProvider;
   late MetricsProvider metricsProvider;
@@ -135,6 +149,22 @@ void main() {
     expect(find.text('No completed session data available'), findsOneWidget);
     expect(find.textContaining('Demo Mode'), findsNothing);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('recent alerts visibly reflect lifecycle status', (tester) async {
+    final recent = _RecentAlertDashboardProvider();
+    addTearDown(recent.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ChangeNotifierProvider<DashboardProvider>.value(
+          value: recent,
+          child: const Scaffold(body: AlertsPanel()),
+        ),
+      ),
+    );
+
+    expect(find.text('RESOLVED'), findsOneWidget);
+    expect(find.text('Suspicious'), findsOneWidget);
   });
 
   testWidgets('active monitoring with no analysis never shows Low Risk',

@@ -215,6 +215,18 @@ class LocalAgentClient {
         '/api/v1/response/threats?page=$page&page_size=$pageSize');
   }
 
+  static Future<Map<String, dynamic>> getResponseThreatHistory({
+    int page = 1,
+    int pageSize = 100,
+    String? status,
+  }) async {
+    final queryStatus =
+        status == null || status == 'ALL' ? '' : '&status=$status';
+    return await _get(
+      '/api/v1/threats/history?page=$page&page_size=$pageSize$queryStatus',
+    );
+  }
+
   static Future<Map<String, dynamic>> investigateThreat(String alertId) async {
     return await _post('/api/v1/response/threats/$alertId/investigate');
   }
@@ -251,16 +263,40 @@ class LocalAgentClient {
         body: notes != null ? {'notes': notes} : {});
   }
 
-  static Future<Map<String, dynamic>> responseBlockIP(String ip,
-      {String? reason}) async {
-    return await _post('/api/v1/response/block',
-        body: {'ip': ip, 'reason': reason});
+  static Future<Map<String, dynamic>> responseBlockIP(
+    String ip, {
+    String? reason,
+    String? alertId,
+  }) async {
+    return await _post('/api/v1/response/block', body: {
+      'ip': ip,
+      'reason': reason,
+      'alert_id': alertId,
+    });
   }
 
-  static Future<Map<String, dynamic>> responseUnblockIP(String ip,
-      {String? reason}) async {
-    return await _post('/api/v1/response/unblock',
-        body: {'ip': ip, 'reason': reason});
+  static Future<Map<String, dynamic>> responseUnblockIP(
+    String ip, {
+    String? reason,
+    String? alertId,
+  }) async {
+    return await _post('/api/v1/response/unblock', body: {
+      'ip': ip,
+      'reason': reason,
+      'alert_id': alertId,
+    });
+  }
+
+  static Future<Map<String, dynamic>> responseWhitelistIP(
+    String ip, {
+    String? reason,
+    String? alertId,
+  }) async {
+    return await _post('/api/v1/response/whitelist', body: {
+      'ip': ip,
+      'reason': reason,
+      'alert_id': alertId,
+    });
   }
 
   static Future<Map<String, dynamic>> getResponseHistory(

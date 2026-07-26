@@ -333,7 +333,11 @@ class DashboardProvider extends ChangeNotifier {
         description:
             'Source: ${ip.isNotEmpty ? ip : "Unknown"}\n${item['summary'] as String? ?? old.description.split('\n').last}',
         time: 'Just now',
-        severity: _parseSeverity(score),
+        severity: _parseAlertSeverity(
+          item['severity']?.toString(),
+          score,
+        ),
+        status: item['status']?.toString() ?? old.status,
       );
       notifyListeners();
     } else {
@@ -376,8 +380,26 @@ class DashboardProvider extends ChangeNotifier {
       title: threatType,
       description: 'Source: $sourceIp\n$extraDesc',
       time: timeAgo,
-      severity: _parseSeverity(score),
+      severity: _parseAlertSeverity(
+        item['severity']?.toString(),
+        score,
+      ),
+      status: item['status']?.toString() ?? 'OPEN',
     );
+  }
+
+  AlertSeverity _parseAlertSeverity(String? severity, double score) {
+    switch (severity?.toUpperCase()) {
+      case 'CRITICAL':
+        return AlertSeverity.critical;
+      case 'HIGH':
+        return AlertSeverity.high;
+      case 'MEDIUM':
+        return AlertSeverity.medium;
+      case 'LOW':
+        return AlertSeverity.low;
+    }
+    return _parseSeverity(score);
   }
 
   AlertSeverity _parseSeverity(double score) {
@@ -856,6 +878,7 @@ class Alert {
   final String description;
   final String time;
   final AlertSeverity severity;
+  final String status;
 
   Alert({
     required this.id,
@@ -863,6 +886,7 @@ class Alert {
     required this.description,
     required this.time,
     required this.severity,
+    this.status = 'OPEN',
   });
 }
 

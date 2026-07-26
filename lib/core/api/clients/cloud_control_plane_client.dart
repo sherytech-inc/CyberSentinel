@@ -1,6 +1,4 @@
-import 'dart:convert';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../app_environment.dart';
 
 /// Centralized HTTP client for the Cloud Control Plane (Supabase Edge Functions).
 /// Handles traffic to the cloud for reporting, third-party integrations, LLMs.
@@ -76,20 +74,4 @@ class CloudControlPlaneClient {
         body: {'action': 'test_integration', 'provider': provider});
   }
 
-  // ── Reports ───────────────────────────────────────────────────────────────
-  static Future<Map<String, dynamic>> getReportingDashboard(
-      String timeRange) async {
-    return await _invokeFunction('reports',
-        body: {'action': 'get_dashboard', 'time_range': timeRange});
-  }
-
-  static Future<Map<String, dynamic>> createReportSnapshot(
-      String timeRange) async {
-    return await _invokeFunction('reports',
-        body: {'action': 'create_snapshot', 'time_range': timeRange});
-  }
-
-  static Future<Map<String, dynamic>> getReportSnapshots() async {
-    return await _invokeFunction('reports', body: {'action': 'list_snapshots'});
-  }
 }

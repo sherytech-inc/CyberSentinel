@@ -1,11 +1,29 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../app_environment.dart';
 import '../../sidecar/sidecar_manager_interface.dart';
+
+class AuthenticatedDownload {
+  final Uint8List bytes;
+  final String contentType;
+  final String filename;
+
+  const AuthenticatedDownload({
+    required this.bytes,
+    required this.contentType,
+    required this.filename,
+  });
+}
+
+class ReportDownloadException implements Exception {
+  final String code;
+  const ReportDownloadException(this.code);
+}
 
 /// Centralized HTTP client for the Local Native Sidecar (FastAPI).
 /// Handles traffic to localhost for packet capture, ML inference, and firewall actions.
@@ -257,9 +275,89 @@ class LocalAgentClient {
         '/api/v1/response/audit-log?page=$page&page_size=$pageSize');
   }
 
-  // ── Helper Methods ──────────────────────────────────────────────────────────────
-  static String getReportingDownloadUrl(String type, String timeRange) {
-    return '$_baseUrl/api/v1/reports/download?type=$type&timeRange=$timeRange';
+  // ── Reports & Intelligence ────────────────────────────────────────────────
+  static Future<Map<String, dynamic>> getReportSummary() async {
+    return await _get('/api/v1/reporting/summary');
+  }
+
+  static String reportExportPath(String type) {
+    switch (type) {
+      case 'pdf':
+        return '/api/v1/reporting/export/pdf';
+      case 'json':
+        return '/api/v1/reporting/export/json';
+      case 'alerts_csv':
+        return '/api/v1/reporting/export/alerts.csv';
+      case 'actions_csv':
+        return '/api/v1/reporting/export/actions.csv';
+      default:
+        throw const ReportDownloadException('unsupported_export');
+    }
+  }
+
+  static Future<AuthenticatedDownload> downloadReport(String type) async {
+    final path = reportExportPath(type);
+    try {
+      final response = await _sendAuthenticated(
+        (headers) => http
+            .get(Uri.parse('$_baseUrl$path'), headers: headers)
+            .timeout(_timeout),
+        allowRefreshRetry: true,
+      );
+      if (response.statusCode == 401 || response.statusCode == 403) {
+        throw const ReportDownloadException('not_authorized');
+      }
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw const ReportDownloadException('report_unavailable');
+      }
+      if (response.bodyBytes.isEmpty) {
+        throw const ReportDownloadException('empty_export');
+      }
+      final contentType =
+          response.headers['content-type'] ?? 'application/octet-stream';
+      final filename = _downloadFilename(
+        response.headers['content-disposition'],
+        fallback: _fallbackReportFilename(type),
+      );
+      return AuthenticatedDownload(
+        bytes: response.bodyBytes,
+        contentType: contentType,
+        filename: filename,
+      );
+    } on TimeoutException {
+      throw const ReportDownloadException('timeout');
+    } on ReportDownloadException {
+      rethrow;
+    } catch (_) {
+      throw const ReportDownloadException('report_unavailable');
+    }
+  }
+
+  static String _fallbackReportFilename(String type) {
+    final extension =
+        type == 'alerts_csv' || type == 'actions_csv' ? 'csv' : type;
+    return 'cybersentinel-report.$extension';
+  }
+
+  static String _downloadFilename(
+    String? contentDisposition, {
+    required String fallback,
+  }) {
+    if (contentDisposition == null || contentDisposition.isEmpty) {
+      return fallback;
+    }
+    final encoded = RegExp(
+      r'''filename\*=UTF-8''([^;]+)''',
+      caseSensitive: false,
+    ).firstMatch(contentDisposition);
+    if (encoded != null) {
+      return Uri.decodeComponent(encoded.group(1)!).split('/').last;
+    }
+    final plain = RegExp(
+      r'''filename\s*=\s*"?([^";]+)"?''',
+      caseSensitive: false,
+    ).firstMatch(contentDisposition);
+    return plain?.group(1)?.trim().split('/').last ?? fallback;
   }
 
   static Future<Map<String, dynamic>> getDemoStatus() async {

@@ -199,6 +199,9 @@ class IPAnalysisScreen extends StatelessWidget {
                     Text(
                         'Confidence Score: ${response.abuseipdb.abuseConfidenceScore}%'),
                     Text('Total Reports: ${response.abuseipdb.totalReports}'),
+                    if (response.abuseipdb.lastReportedAt != null)
+                      Text(
+                          'Last Reported: ${response.abuseipdb.lastReportedAt}'),
                   ],
                 )
               : null,
@@ -213,8 +216,11 @@ class IPAnalysisScreen extends StatelessWidget {
               ? Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                        'Location: ${response.geoip.city}, ${response.geoip.country}'),
+                    Text('Location: ${[
+                      response.geoip.city,
+                      response.geoip.region,
+                      response.geoip.country
+                    ].whereType<String>().where((v) => v.isNotEmpty).join(', ')}'),
                     Text('ISP: ${response.geoip.isp} (${response.geoip.asn})'),
                     if (response.geoip.isProxy == true)
                       const Text('Is Proxy: Yes',
@@ -248,8 +254,11 @@ class IPAnalysisScreen extends StatelessWidget {
         border: Border.all(color: color.withOpacity(0.2)),
         borderRadius: BorderRadius.circular(AppTheme.radiusLg),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        runAlignment: WrapAlignment.spaceBetween,
+        spacing: 24,
+        runSpacing: 12,
         children: [
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -303,6 +312,10 @@ class IPAnalysisScreen extends StatelessWidget {
         statusIcon = LucideIcons.check;
         statusColor = AppTheme.success;
         break;
+      case IntelProviderStatus.skipped:
+        statusIcon = LucideIcons.circleMinus;
+        statusColor = AppTheme.textSecondary;
+        break;
       case IntelProviderStatus.notConfigured:
         statusIcon = LucideIcons.settings;
         statusColor = AppTheme.textSecondary;
@@ -331,16 +344,24 @@ class IPAnalysisScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 16,
+            runSpacing: 10,
             children: [
-              Icon(icon, size: 24, color: AppTheme.primary),
-              const SizedBox(width: 12),
-              Text(
-                title,
-                style:
-                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 24, color: AppTheme.primary),
+                  const SizedBox(width: 12),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ],
               ),
-              const Spacer(),
               Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 6),

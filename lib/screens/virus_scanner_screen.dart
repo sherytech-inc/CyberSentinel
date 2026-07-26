@@ -640,6 +640,12 @@ class ScanResultPanel extends StatelessWidget {
           'Invalid target',
           result.message
         ),
+      ScanStatus.failed => (
+          LucideIcons.circleX,
+          AppTheme.warning,
+          'Scan failed',
+          result.message
+        ),
       _ => (
           LucideIcons.cloudOff,
           AppTheme.warning,

@@ -36,6 +36,9 @@ class VirusScannerProvider extends ChangeNotifier {
   String? _hashError;
   String? _fileError;
   final List<ScanResult> _recentScans = [];
+  int _urlGeneration = 0;
+  int _hashGeneration = 0;
+  int _fileGeneration = 0;
 
   String get urlInput => _urlInput;
   String get hashInput => _hashInput;
@@ -121,17 +124,23 @@ class VirusScannerProvider extends ChangeNotifier {
       return;
     }
     _urlScanning = true;
+    final generation = ++_urlGeneration;
     _urlResult = null;
     _urlError = null;
     notifyListeners();
     try {
-      _urlResult = await _parse(_urlRequest(_urlInput.trim()));
+      final result = await _parse(_urlRequest(_urlInput.trim()));
+      if (generation != _urlGeneration) return;
+      _urlResult = result;
       _remember(_urlResult!);
     } catch (_) {
+      if (generation != _urlGeneration) return;
       _urlError = 'VirusTotal is temporarily unavailable.';
     } finally {
-      _urlScanning = false;
-      notifyListeners();
+      if (generation == _urlGeneration) {
+        _urlScanning = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -143,40 +152,60 @@ class VirusScannerProvider extends ChangeNotifier {
       return;
     }
     _hashScanning = true;
+    final generation = ++_hashGeneration;
     _hashResult = null;
     _hashError = null;
     notifyListeners();
     try {
-      _hashResult = await _parse(_hashRequest(_hashInput.trim()));
+      final result = await _parse(_hashRequest(_hashInput.trim()));
+      if (generation != _hashGeneration) return;
+      _hashResult = result;
       _remember(_hashResult!);
     } catch (_) {
+      if (generation != _hashGeneration) return;
       _hashError = 'VirusTotal is temporarily unavailable.';
     } finally {
-      _hashScanning = false;
-      notifyListeners();
+      if (generation == _hashGeneration) {
+        _hashScanning = false;
+        notifyListeners();
+      }
     }
   }
 
   Future<void> scanSelectedFile() async {
     if (_fileScanning || _fileBytes == null) return;
     _fileScanning = true;
+    final generation = ++_fileGeneration;
     _fileResult = null;
     _fileError = null;
     notifyListeners();
     try {
-      _fileResult = await _parse(_fileRequest(_fileInput, _fileBytes!));
+      final result = await _parse(_fileRequest(_fileInput, _fileBytes!));
+      if (generation != _fileGeneration) return;
+      _fileResult = result;
       _remember(_fileResult!);
     } catch (_) {
+      if (generation != _fileGeneration) return;
       _fileError = 'VirusTotal is temporarily unavailable.';
     } finally {
-      _fileScanning = false;
-      notifyListeners();
+      if (generation == _fileGeneration) {
+        _fileScanning = false;
+        notifyListeners();
+      }
     }
   }
 
   Future<ScanResult> _parse(Future<Map<String, dynamic>> request) async {
     final result = await request;
-    if (result['error'] == true) throw StateError('request_failed');
+    if (result['error'] == true) {
+      final data = result['data'];
+      if (data is Map &&
+          data.containsKey('scan_type') &&
+          data.containsKey('status')) {
+        return ScanResult.fromJson(Map<String, dynamic>.from(data));
+      }
+      throw StateError('request_failed');
+    }
     return ScanResult.fromJson(result);
   }
 
@@ -188,6 +217,9 @@ class VirusScannerProvider extends ChangeNotifier {
   }
 
   void clear() {
+    _urlGeneration++;
+    _hashGeneration++;
+    _fileGeneration++;
     _urlInput = '';
     _hashInput = '';
     _fileInput = '';

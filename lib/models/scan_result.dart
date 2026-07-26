@@ -39,6 +39,7 @@ class ScanResult {
     final statusStr = json['status']?.toString().toLowerCase() ?? 'unavailable';
     ScanStatus parsedStatus;
     switch (statusStr) {
+      case 'complete':
       case 'completed':
         parsedStatus = ScanStatus.completed;
         break;
@@ -59,6 +60,9 @@ class ScanResult {
         break;
       case 'file_too_large':
         parsedStatus = ScanStatus.fileTooLarge;
+        break;
+      case 'failed':
+        parsedStatus = ScanStatus.failed;
         break;
       case 'unsupported_file':
         parsedStatus = ScanStatus.unsupportedFile;
@@ -116,6 +120,7 @@ enum ScanStatus {
   unavailable,
   invalidTarget,
   fileTooLarge,
+  failed,
   unsupportedFile,
 }
 

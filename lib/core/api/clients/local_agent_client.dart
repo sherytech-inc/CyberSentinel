@@ -29,7 +29,8 @@ class ReportDownloadException implements Exception {
 /// Handles traffic to localhost for packet capture, ML inference, and firewall actions.
 class LocalAgentClient {
   static String _baseUrl = AppEnvironment.apiBaseUrl;
-  static final Duration _timeout = const Duration(seconds: 15);
+  static const Duration _timeout = Duration(seconds: 15);
+  static const Duration _scannerTimeout = Duration(seconds: 30);
   static const _uuid = Uuid();
 
   static void setBaseUrl(String url) {
@@ -104,7 +105,7 @@ class LocalAgentClient {
         request.headers.addAll(headers);
         request.files.add(
             http.MultipartFile.fromBytes('file', bytes, filename: fileName));
-        final streamedResponse = await request.send().timeout(_timeout);
+        final streamedResponse = await request.send().timeout(_scannerTimeout);
         return http.Response.fromStream(streamedResponse);
       }, allowRefreshRetry: true);
       return _handleResponse(response);
@@ -133,10 +134,12 @@ class LocalAgentClient {
   }
 
   static Future<Map<String, dynamic>> scanVirusUrl(String url) async =>
-      _post('/api/v1/scanner/url', body: {'url': url});
+      _post('/api/v1/scanner/url',
+          body: {'url': url}, timeout: _scannerTimeout);
 
   static Future<Map<String, dynamic>> scanVirusHash(String hash) async =>
-      _post('/api/v1/scanner/hash', body: {'hash': hash});
+      _post('/api/v1/scanner/hash',
+          body: {'hash': hash}, timeout: _scannerTimeout);
 
   static Future<Map<String, dynamic>> lookupThreatIntelligence(
           String ip) async =>
@@ -643,9 +646,11 @@ class LocalAgentClient {
       }
     } else {
       String errorMessage = 'Server error (${response.statusCode})';
+      Map<String, dynamic>? structuredError;
       try {
         final errorData = jsonDecode(response.body);
         if (errorData is Map) {
+          structuredError = Map<String, dynamic>.from(errorData);
           final detail = errorData['detail'];
           if (errorData['message'] is String) {
             errorMessage = errorData['message'];
@@ -668,6 +673,15 @@ class LocalAgentClient {
         'error': true,
         'status_code': response.statusCode,
         'message': errorMessage,
+        if (structuredError
+            case {
+              'ip': _,
+              'status': _,
+              'virustotal': _,
+              'abuseipdb': _,
+              'geoip': _,
+            })
+          'data': structuredError,
       };
     }
   }

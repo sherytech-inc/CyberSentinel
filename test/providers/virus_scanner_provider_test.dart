@@ -114,4 +114,46 @@ void main() {
     expect(provider.hasSelectedFile, isFalse);
     expect(provider.urlInput, 'https://example.com');
   });
+
+  test('clear invalidates an in-flight file result', () async {
+    final pending = Completer<Map<String, dynamic>>();
+    final provider = VirusScannerProvider(
+      fileRequest: (_, __) => pending.future,
+    );
+    provider.selectFile('sample.txt', [1, 2, 3]);
+    final request = provider.scanSelectedFile();
+    provider.clear();
+    pending.complete(result('file', 'sample.txt'));
+    await request;
+    expect(provider.fileResult, isNull);
+    expect(provider.fileScanning, isFalse);
+    expect(provider.recentScans, isEmpty);
+  });
+
+  test('canonical complete status is accepted', () {
+    final parsed = ScanResult.fromJson(
+      result('url', 'https://example.com', status: 'complete'),
+    );
+    expect(parsed.status, ScanStatus.completed);
+  });
+
+  test('normalized failed result remains safe and usable', () async {
+    final provider = VirusScannerProvider(
+      hashRequest: (hash) async => {
+        'error': true,
+        'message': 'Provider returned an invalid analysis response.',
+        'data': {
+          'scan_type': 'hash',
+          'target': hash,
+          'status': 'failed',
+          'verdict': 'unknown',
+          'message': 'Provider returned an invalid analysis response.',
+        },
+      },
+    );
+    provider.setHashInput(List.filled(64, 'a').join());
+    await provider.scanHash();
+    expect(provider.hashResult?.status, ScanStatus.failed);
+    expect(provider.hashError, isNull);
+  });
 }

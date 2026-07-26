@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:cybersentinel/core/api/clients/local_agent_client.dart';
 import 'package:flutter/material.dart';
 import 'session_cleanup_coordinator.dart';
@@ -34,6 +36,7 @@ class ThreatIntelProvider extends ChangeNotifier {
 
   /// Runs unified multi-model analysis on the entered IP via the backend API.
   Future<void> analyzeIP() async {
+    if (_isLoading) return;
     final query = _searchQuery.trim();
 
     if (query.isEmpty) {
@@ -43,31 +46,11 @@ class ThreatIntelProvider extends ChangeNotifier {
       return;
     }
 
-    final ipv4Regex = RegExp(
-        r'^((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$');
-    if (!ipv4Regex.hasMatch(query)) {
-      _errorMessage = "'$query' is not a valid IPv4 address.";
+    if (InternetAddress.tryParse(query) == null) {
+      _errorMessage = "'$query' is not a valid IP address.";
       _intelResponse = null;
       notifyListeners();
       return;
-    }
-
-    final privatePrefixes = [
-      '10.',
-      '192.168.',
-      '127.',
-      '169.254.',
-      '0.',
-      for (int i = 16; i <= 31; i++) '172.$i.'
-    ];
-
-    for (var prefix in privatePrefixes) {
-      if (query.startsWith(prefix)) {
-        _errorMessage = "'$query' is a private/reserved address.";
-        _intelResponse = null;
-        notifyListeners();
-        return;
-      }
     }
 
     _isLoading = true;
@@ -85,8 +68,12 @@ class ThreatIntelProvider extends ChangeNotifier {
         // Validation errors return 422 which maps to invalid_target
         // Or 503 which maps to unavailable
         // We handle the parsed IntelligenceResponse if backend returns it
-        if (result.containsKey('ip') && result.containsKey('status')) {
-          _intelResponse = IntelligenceResponse.fromJson(result);
+        final data = result['data'];
+        if (data is Map &&
+            data.containsKey('ip') &&
+            data.containsKey('status')) {
+          _intelResponse =
+              IntelligenceResponse.fromJson(Map<String, dynamic>.from(data));
           _errorMessage = null;
         } else {
           _errorMessage = result['message']?.toString() ?? 'Analysis failed';

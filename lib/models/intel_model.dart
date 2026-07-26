@@ -32,6 +32,7 @@ enum IntelStatus {
 
 enum IntelProviderStatus {
   completed,
+  skipped,
   notConfigured,
   notFound,
   quotaExceeded,
@@ -41,6 +42,8 @@ enum IntelProviderStatus {
     switch (value) {
       case 'completed':
         return IntelProviderStatus.completed;
+      case 'skipped':
+        return IntelProviderStatus.skipped;
       case 'not_configured':
         return IntelProviderStatus.notConfigured;
       case 'not_found':
@@ -94,6 +97,7 @@ class AbuseIpDbIntelResult {
   final int? abuseConfidenceScore;
   final int? totalReports;
   final int? numDistinctUsers;
+  final String? lastReportedAt;
   final bool? isWhitelisted;
   final bool? isTor;
 
@@ -103,6 +107,7 @@ class AbuseIpDbIntelResult {
     this.abuseConfidenceScore,
     this.totalReports,
     this.numDistinctUsers,
+    this.lastReportedAt,
     this.isWhitelisted,
     this.isTor,
   });
@@ -114,6 +119,7 @@ class AbuseIpDbIntelResult {
       abuseConfidenceScore: (json['abuse_confidence_score'] as num?)?.toInt(),
       totalReports: (json['total_reports'] as num?)?.toInt(),
       numDistinctUsers: (json['num_distinct_users'] as num?)?.toInt(),
+      lastReportedAt: json['last_reported_at']?.toString(),
       isWhitelisted: json['is_whitelisted'] as bool?,
       isTor: json['is_tor'] as bool?,
     );
@@ -125,6 +131,7 @@ class GeoIpIntelResult {
   final String? message;
   final String? country;
   final String? countryCode;
+  final String? region;
   final String? city;
   final String? asn;
   final String? organization;
@@ -137,6 +144,7 @@ class GeoIpIntelResult {
     this.message,
     this.country,
     this.countryCode,
+    this.region,
     this.city,
     this.asn,
     this.organization,
@@ -151,6 +159,7 @@ class GeoIpIntelResult {
       message: json['message'] is String ? json['message'] as String : null,
       country: json['country']?.toString(),
       countryCode: json['country_code']?.toString(),
+      region: json['region']?.toString(),
       city: json['city']?.toString(),
       asn: json['asn']?.toString(),
       organization: json['organization']?.toString(),
@@ -163,11 +172,15 @@ class GeoIpIntelResult {
 
 class IntelligenceResponse {
   final String ip;
+  final String target;
   final IntelStatus status;
   final int? intelScore;
   final String? severity;
   final String? scoreConfidence;
   final List<String> providersUsed;
+  final List<String> providersQueried;
+  final List<String> providersAvailable;
+  final String analysisStatus;
   final VirusTotalIntelResult virustotal;
   final AbuseIpDbIntelResult abuseipdb;
   final GeoIpIntelResult geoip;
@@ -177,11 +190,15 @@ class IntelligenceResponse {
 
   IntelligenceResponse({
     required this.ip,
+    required this.target,
     required this.status,
     this.intelScore,
     this.severity,
     this.scoreConfidence,
     required this.providersUsed,
+    required this.providersQueried,
+    required this.providersAvailable,
+    required this.analysisStatus,
     required this.virustotal,
     required this.abuseipdb,
     required this.geoip,
@@ -193,6 +210,7 @@ class IntelligenceResponse {
   factory IntelligenceResponse.fromJson(Map<String, dynamic> json) {
     return IntelligenceResponse(
       ip: json['ip'] as String? ?? '0.0.0.0',
+      target: json['target']?.toString() ?? json['ip']?.toString() ?? '0.0.0.0',
       status: IntelStatus.fromString(json['status'] ?? 'unavailable'),
       intelScore: (json['intel_score'] as num?)?.toInt(),
       severity: json['severity']?.toString(),
@@ -201,6 +219,15 @@ class IntelligenceResponse {
               ?.map((e) => e.toString())
               .toList() ??
           [],
+      providersQueried: (json['providers_queried'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
+      providersAvailable: (json['providers_available'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
+      analysisStatus: json['analysis_status']?.toString() ?? 'failed',
       virustotal: VirusTotalIntelResult.fromJson(json['virustotal'] is Map
           ? Map<String, dynamic>.from(json['virustotal'])
           : {}),

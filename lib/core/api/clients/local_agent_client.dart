@@ -114,6 +114,27 @@ class LocalAgentClient {
     }
   }
 
+  static Future<Map<String, dynamic>> analyzeFirewallLogs(
+      String fileName, List<int> bytes) async {
+    try {
+      final response = await _sendAuthenticated((headers) async {
+        final request = http.MultipartRequest(
+            'POST', Uri.parse('$_baseUrl/api/v1/firewall-logs/analyze'));
+        request.headers.addAll(headers);
+        request.files.add(http.MultipartFile.fromBytes(
+          'file',
+          bytes,
+          filename: fileName.split(RegExp(r'[/\\]')).last,
+        ));
+        final streamedResponse = await request.send().timeout(_scannerTimeout);
+        return http.Response.fromStream(streamedResponse);
+      }, allowRefreshRetry: true);
+      return _handleResponse(response);
+    } catch (e) {
+      return _handleException(e);
+    }
+  }
+
   // ── Threats ───────────────────────────────────────────────────────────────
   static Future<Map<String, dynamic>> scanVirusFile(
       String fileName, List<int> bytes) async {
@@ -656,6 +677,11 @@ class LocalAgentClient {
             errorMessage = errorData['message'];
           } else if (detail is String) {
             errorMessage = detail;
+          } else if (detail is Map) {
+            final safeMessage = detail['message'];
+            if (safeMessage is String) {
+              errorMessage = safeMessage;
+            }
           } else if (detail is List && detail.isNotEmpty) {
             final first = detail.first;
             if (first is Map) {
@@ -673,6 +699,9 @@ class LocalAgentClient {
         'error': true,
         'status_code': response.statusCode,
         'message': errorMessage,
+        if (structuredError?['detail'] is Map &&
+            (structuredError!['detail'] as Map)['status'] is String)
+          'status': (structuredError['detail'] as Map)['status'],
         if (structuredError
             case {
               'ip': _,

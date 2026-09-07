@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
-import '../../core/theme/app_theme.dart';
-import '../../providers/dashboard_provider.dart';
 
+import '../../providers/dashboard_provider.dart';
+import '../../widgets/common/common.dart';
+
+/// Highest-volume sources flagged by the classifier.
+///
+/// Threat level is resolved through [CsSemantics] so the same word carries the
+/// same colour here as it does in the alerts panel and the threat response
+/// screen. The badge text is the meaning carrier, so the icon is dropped to
+/// keep the dense columns readable.
 class MaliciousIPsTable extends StatelessWidget {
   const MaliciousIPsTable({super.key});
 
@@ -10,141 +18,96 @@ class MaliciousIPsTable extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<DashboardProvider>(
       builder: (context, provider, _) {
-        return Container(
-          padding: const EdgeInsets.all(AppTheme.spacing24),
-          decoration: BoxDecoration(
-            color: AppTheme.bgSecondary,
-            border: Border.all(color: AppTheme.borderPrimary),
-            borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+        final colors = CsColors.of(context);
+        final text = CsTypography.of(context);
+        final ips = provider.maliciousIPs;
+
+        return AppCard(
+          title: 'Top Malicious IPs',
+          trailing: Text(
+            'Last 24 hours',
+            style: text.bodySmall.copyWith(color: colors.textTertiary),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  Text(
-                    'Top Malicious IPs',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.textPrimary,
-                    ),
-                  ),
-                  Text(
-                    'Last 24 hours',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppTheme.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppTheme.spacing24),
-              _buildTableHeader(),
-              ...provider.maliciousIPs.map((ip) => _buildTableRow(ip)).toList(),
-            ],
-          ),
+          child: ips.isEmpty
+              ? const EmptyState(
+                  icon: LucideIcons.globe,
+                  title: 'No malicious sources recorded',
+                  description:
+                      'Flagged sources appear here once traffic has been analyzed.',
+                  compact: true,
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const _TableHeader(),
+                    for (final ip in ips) _TableRow(ip: ip),
+                  ],
+                ),
         );
       },
     );
   }
+}
 
-  Widget _buildTableHeader() {
+class _TableHeader extends StatelessWidget {
+  const _TableHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = CsColors.of(context);
+    final text = CsTypography.of(context);
+    final style = text.labelMedium.copyWith(
+      color: colors.textTertiary,
+      letterSpacing: 0.5,
+    );
+
     return Container(
       padding: const EdgeInsets.symmetric(
-        horizontal: AppTheme.spacing16,
-        vertical: AppTheme.spacing12,
+        horizontal: CsSpacing.lg,
+        vertical: CsSpacing.md,
       ),
-      decoration: const BoxDecoration(
-        color: AppTheme.borderPrimary,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(AppTheme.radiusMd),
-          topRight: Radius.circular(AppTheme.radiusMd),
+      decoration: BoxDecoration(
+        color: colors.backgroundTertiary,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(CsRadius.medium),
+          topRight: Radius.circular(CsRadius.medium),
         ),
       ),
       child: Row(
-        children: const [
+        children: [
+          Expanded(flex: 3, child: Text('IP ADDRESS', style: style)),
+          Expanded(flex: 2, child: Text('COUNTRY', style: style)),
           Expanded(
-            flex: 3,
-            child: Text(
-              'IP ADDRESS',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: AppTheme.textTertiary,
-                letterSpacing: 0.5,
-              ),
-            ),
+            flex: 2,
+            child: Text('REQUESTS', textAlign: TextAlign.right, style: style),
           ),
           Expanded(
             flex: 2,
-            child: Text(
-              'COUNTRY',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: AppTheme.textTertiary,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text(
-              'REQUESTS',
-              textAlign: TextAlign.right,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: AppTheme.textTertiary,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text(
-              'THREAT',
-              textAlign: TextAlign.right,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: AppTheme.textTertiary,
-                letterSpacing: 0.5,
-              ),
-            ),
+            child: Text('THREAT', textAlign: TextAlign.right, style: style),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildTableRow(MaliciousIP ip) {
-    Color getThreatColor(String level) {
-      switch (level) {
-        case 'Critical':
-          return AppTheme.error;
-        case 'High':
-          return AppTheme.warning;
-        case 'Medium':
-          return Colors.orange.shade400;
-        default:
-          return AppTheme.info;
-      }
-    }
+class _TableRow extends StatelessWidget {
+  const _TableRow({required this.ip});
 
-    final threatColor = getThreatColor(ip.threatLevel);
+  final MaliciousIP ip;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = CsColors.of(context);
+    final text = CsTypography.of(context);
 
     return Container(
       padding: const EdgeInsets.symmetric(
-        horizontal: AppTheme.spacing16,
-        vertical: AppTheme.spacing12,
+        horizontal: CsSpacing.lg,
+        vertical: CsSpacing.md,
       ),
-      decoration: const BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: AppTheme.borderPrimary),
-        ),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: colors.border)),
       ),
       child: Row(
         children: [
@@ -152,10 +115,11 @@ class MaliciousIPsTable extends StatelessWidget {
             flex: 3,
             child: Text(
               ip.ip,
-              style: const TextStyle(
-                fontSize: 14,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: text.body.copyWith(
+                color: colors.textPrimary,
                 fontFamily: 'monospace',
-                color: AppTheme.textPrimary,
               ),
             ),
           ),
@@ -163,10 +127,9 @@ class MaliciousIPsTable extends StatelessWidget {
             flex: 2,
             child: Text(
               ip.country,
-              style: const TextStyle(
-                fontSize: 14,
-                color: AppTheme.textSecondary,
-              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: text.body.copyWith(color: colors.textSecondary),
             ),
           ),
           Expanded(
@@ -174,34 +137,17 @@ class MaliciousIPsTable extends StatelessWidget {
             child: Text(
               ip.requests.toString(),
               textAlign: TextAlign.right,
-              style: const TextStyle(
-                fontSize: 14,
-                color: AppTheme.textSecondary,
-              ),
+              style: text.body.copyWith(color: colors.textSecondary),
             ),
           ),
           Expanded(
             flex: 2,
             child: Align(
               alignment: Alignment.centerRight,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppTheme.spacing8,
-                  vertical: AppTheme.spacing4,
-                ),
-                decoration: BoxDecoration(
-                  color: threatColor.withOpacity(0.1),
-                  border: Border.all(color: threatColor.withOpacity(0.2)),
-                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                ),
-                child: Text(
-                  ip.threatLevel,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: threatColor,
-                  ),
-                ),
+              child: SeverityBadge.fromString(
+                ip.threatLevel,
+                size: CsBadgeSize.sm,
+                showIcon: false,
               ),
             ),
           ),

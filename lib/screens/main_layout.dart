@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:go_router/go_router.dart';
-import '../core/theme/app_theme.dart';
 import '../providers/app_state_provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/settings_provider.dart';
+import '../widgets/common/common.dart';
 
 class _NavItem {
   final String route;
@@ -64,58 +65,76 @@ class MainLayout extends StatelessWidget {
       context.read<AppStateProvider>().setCurrentRoute(location);
     });
 
+    final colors = CsColors.of(context);
+    final text = CsTypography.of(context);
+
     return Consumer<AuthProvider>(
       builder: (context, authState, _) {
         if (authState.isLoading) {
-          return const Scaffold(
-            backgroundColor: AppTheme.bgPrimary,
+          return Scaffold(
+            backgroundColor: colors.backgroundPrimary,
             body: Center(
-              child: CircularProgressIndicator(color: AppTheme.primary),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const CyberSentinelLogo(size: 40),
+                  const SizedBox(height: CsSpacing.xl),
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: colors.primary,
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
         }
 
         if (authState.user != null && authState.profile == null) {
           return Scaffold(
-            backgroundColor: AppTheme.bgPrimary,
+            backgroundColor: colors.backgroundPrimary,
             body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(LucideIcons.triangleAlert,
-                      size: 48, color: AppTheme.error),
-                  const SizedBox(height: 16),
+                  Icon(LucideIcons.triangleAlert,
+                      size: 40, color: colors.error),
+                  const SizedBox(height: CsSpacing.lg),
                   Text(
                     authState.error ??
                         'Your CyberSentinel profile could not be loaded.',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: AppTheme.textPrimary,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
+                    style: text.title.copyWith(color: colors.textPrimary),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: CsSpacing.xl),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       ElevatedButton.icon(
                         icon: const Icon(LucideIcons.refreshCw, size: 16),
                         label: const Text('Retry'),
+                        // No global button theme exists on purpose, so this
+                        // button carries its own tokens.
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primary,
-                          foregroundColor: Colors.white,
+                          backgroundColor: colors.primary,
+                          foregroundColor: colors.primaryForeground,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: CsRadius.mediumBorder,
+                          ),
                         ),
                         onPressed: () {
                           authState.retryProfileBootstrap();
                         },
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: CsSpacing.lg),
                       TextButton.icon(
                         icon: const Icon(LucideIcons.logOut, size: 16),
                         label: const Text('Sign Out'),
                         style: TextButton.styleFrom(
-                          foregroundColor: AppTheme.textSecondary,
+                          foregroundColor: colors.textSecondary,
                         ),
                         onPressed: () {
                           authState.signOut();
@@ -132,38 +151,33 @@ class MainLayout extends StatelessWidget {
         return Consumer<AppStateProvider>(
           builder: (context, appState, _) {
             return Scaffold(
-              backgroundColor: AppTheme.bgPrimary,
-              body: Stack(
+              backgroundColor: colors.backgroundPrimary,
+              body: Row(
                 children: [
-                  Row(
-                    children: [
-                      _Sidebar(
-                        navItems: _navItems,
-                        currentRoute: appState.currentRoute,
-                        onRouteSelected: (route) {
-                          context.go(route);
-                          appState.setCurrentRoute(route);
-                        },
-                      ),
-                      Expanded(
-                        child: Column(
-                          children: [
-                            _TopBar(title: appState.pageTitle),
-                            Expanded(
-                              child: Padding(
-                                padding:
-                                    const EdgeInsets.all(AppTheme.spacing24),
-                                // [child] is the screen GoRouter injects via ShellRoute.
-                                // Fallback to DashboardScreen never fires in practice
-                                // because GoRouter always provides a child, but keeps
-                                // the widget tree valid during hot reload edge cases.
-                                child: child ?? const SizedBox.shrink(),
-                              ),
-                            ),
-                          ],
+                  _Sidebar(
+                    navItems: _navItems,
+                    currentRoute: appState.currentRoute,
+                    onRouteSelected: (route) {
+                      context.go(route);
+                      appState.setCurrentRoute(route);
+                    },
+                  ),
+                  Expanded(
+                    child: Column(
+                      children: [
+                        _TopBar(title: appState.pageTitle),
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.all(CsSpacing.xl),
+                            // [child] is the screen GoRouter injects via ShellRoute.
+                            // The empty fallback never fires in practice because
+                            // GoRouter always provides a child, but keeps the
+                            // widget tree valid during hot reload edge cases.
+                            child: child ?? const SizedBox.shrink(),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -190,110 +204,41 @@ class _Sidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = CsColors.of(context);
+
     return Container(
-      width: 240,
-      color: AppTheme.bgSecondary,
+      width: CsBreakpoints.sidebarExpanded,
+      decoration: BoxDecoration(
+        color: colors.backgroundSecondary,
+        border: Border(right: BorderSide(color: colors.borderSubtle)),
+      ),
       child: Column(
         children: [
-          _buildLogo(),
-          const Divider(color: AppTheme.borderPrimary, height: 1),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(
+                CsSpacing.lg, CsSpacing.lg, CsSpacing.lg, CsSpacing.md),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: CyberSentinelLockup(size: 20),
+            ),
+          ),
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: AppTheme.spacing8),
-              children: navItems
-                  .map((item) => _NavTile(
-                        item: item,
-                        isSelected: currentRoute == item.route,
-                        onTap: () => onRouteSelected(item.route),
-                      ))
-                  .toList(),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: CsSpacing.md, vertical: CsSpacing.sm),
+              children: [
+                for (final item in navItems)
+                  _NavTile(
+                    item: item,
+                    isSelected: currentRoute == item.route,
+                    onTap: () => onRouteSelected(item.route),
+                  ),
+              ],
             ),
           ),
-          const Divider(color: AppTheme.borderPrimary, height: 1),
-          _buildUserFooter(),
+          Divider(color: colors.borderSubtle, height: 1, thickness: 1),
+          const _UserFooter(),
         ],
-      ),
-    );
-  }
-
-  Widget _buildLogo() {
-    return Container(
-      padding: const EdgeInsets.all(AppTheme.spacing24),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppTheme.primary, Color(0xFF2563EB)],
-              ),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child:
-                const Icon(LucideIcons.shield, color: Colors.white, size: 20),
-          ),
-          const SizedBox(width: 12),
-          const Text(
-            'CyberSentinel',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: AppTheme.textPrimary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildUserFooter() {
-    return Container(
-      padding: const EdgeInsets.all(AppTheme.spacing16),
-      child: Consumer<AuthProvider>(
-        builder: (context, authState, child) {
-          final profile = authState.profile;
-          final email = authState.user?.email ?? '';
-          final role = profile?.role ?? '';
-
-          return Row(
-            children: [
-              CircleAvatar(
-                radius: 16,
-                backgroundColor: AppTheme.primary.withOpacity(0.2),
-                child: const Icon(LucideIcons.user,
-                    size: 16, color: AppTheme.primary),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      role.toUpperCase(),
-                      style: const TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.w500),
-                    ),
-                    Text(
-                      email,
-                      style: const TextStyle(
-                          fontSize: 11, color: AppTheme.textSecondary),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-              IconButton(
-                icon: const Icon(LucideIcons.logOut,
-                    size: 18, color: AppTheme.textSecondary),
-                tooltip: 'Logout',
-                onPressed: () {
-                  context.read<AuthProvider>().signOut();
-                },
-              ),
-            ],
-          );
-        },
       ),
     );
   }
@@ -314,49 +259,117 @@ class _NavTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = CsColors.of(context);
+    final text = CsTypography.of(context);
+
     return Padding(
-      padding: const EdgeInsets.symmetric(
-          horizontal: AppTheme.spacing8, vertical: 2),
-      child: Material(
-        color: isSelected
-            ? AppTheme.primary.withOpacity(0.15)
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-          onTap: onTap,
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-                horizontal: AppTheme.spacing12, vertical: AppTheme.spacing8),
-            decoration: isSelected
-                ? BoxDecoration(
-                    border: Border(
-                      left: BorderSide(color: AppTheme.primary, width: 3),
-                    ),
-                  )
-                : null,
-            child: Row(
-              children: [
-                Icon(
-                  item.icon,
-                  size: 18,
-                  color: isSelected ? AppTheme.primary : AppTheme.textSecondary,
-                ),
-                const SizedBox(width: AppTheme.spacing12),
-                Text(
-                  item.label,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                    color: isSelected
-                        ? AppTheme.textPrimary
-                        : AppTheme.textSecondary,
+      padding: const EdgeInsets.symmetric(vertical: 1),
+      child: Semantics(
+        selected: isSelected,
+        button: true,
+        label: item.label,
+        child: Material(
+          color: isSelected ? colors.surfaceHover : Colors.transparent,
+          borderRadius: CsRadius.mediumBorder,
+          child: InkWell(
+            borderRadius: CsRadius.mediumBorder,
+            hoverColor: colors.surfaceHover.withValues(alpha: 0.6),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: CsSpacing.md, vertical: 9),
+              child: Row(
+                children: [
+                  Icon(
+                    item.icon,
+                    size: 17,
+                    color: isSelected ? colors.primary : colors.textSecondary,
                   ),
-                ),
-              ],
+                  const SizedBox(width: CsSpacing.md),
+                  Expanded(
+                    child: Text(
+                      item.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: text.bodyMedium.copyWith(
+                        fontWeight:
+                            isSelected ? FontWeight.w600 : FontWeight.w400,
+                        color:
+                            isSelected ? colors.textPrimary : colors.textSecondary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ── User footer ────────────────────────────────────────────────────────────
+
+class _UserFooter extends StatelessWidget {
+  const _UserFooter();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = CsColors.of(context);
+    final text = CsTypography.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.all(CsSpacing.md),
+      child: Consumer<AuthProvider>(
+        builder: (context, authState, _) {
+          final profile = authState.profile;
+          final email = authState.user?.email ?? '';
+          final role = profile?.role ?? '';
+          final initial =
+              email.isNotEmpty ? email.characters.first.toUpperCase() : '?';
+
+          return Row(
+            children: [
+              CircleAvatar(
+                radius: 15,
+                backgroundColor: CsColors.tint(colors.primary, alpha: 0.15),
+                child: Text(
+                  initial,
+                  style: text.labelMedium.copyWith(color: colors.primary),
+                ),
+              ),
+              const SizedBox(width: CsSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      role.isEmpty ? 'Signed in' : role.toUpperCase(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style:
+                          text.labelMedium.copyWith(color: colors.textPrimary),
+                    ),
+                    Text(
+                      email,
+                      style: text.caption.copyWith(color: colors.textTertiary),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: Icon(LucideIcons.logOut,
+                    size: 17, color: colors.textSecondary),
+                tooltip: 'Logout',
+                onPressed: () {
+                  context.read<AuthProvider>().signOut();
+                },
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -371,76 +384,91 @@ class _TopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = CsColors.of(context);
+    final text = CsTypography.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
-      height: 64,
-      padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacing24),
-      decoration: const BoxDecoration(
-        color: AppTheme.bgSecondary,
-        border: Border(bottom: BorderSide(color: AppTheme.borderPrimary)),
+      height: 57,
+      padding: const EdgeInsets.symmetric(horizontal: CsSpacing.xl),
+      decoration: BoxDecoration(
+        color: colors.backgroundPrimary,
+        border: Border(bottom: BorderSide(color: colors.borderSubtle)),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.textPrimary,
+          Expanded(
+            child: Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: text.headline.copyWith(color: colors.textPrimary),
             ),
           ),
-          Row(
-            children: [
-              IconButton(
-                icon: const Icon(LucideIcons.settings,
-                    size: 20, color: AppTheme.textSecondary),
-                onPressed: () {
-                  context.go('/settings');
-                  context.read<AppStateProvider>().setCurrentRoute('/settings');
-                },
-                tooltip: 'Settings',
-              ),
-              const SizedBox(width: 8),
-              PopupMenuButton<String>(
-                offset: const Offset(0, 40),
-                color: AppTheme.bgSecondary,
-                icon: CircleAvatar(
-                  radius: 14,
-                  backgroundColor: AppTheme.primary.withOpacity(0.2),
-                  child: const Icon(LucideIcons.user,
-                      size: 14, color: AppTheme.primary),
+          IconButton(
+            icon: Icon(
+              isDark ? LucideIcons.sun : LucideIcons.moon,
+              size: 18,
+              color: colors.textSecondary,
+            ),
+            tooltip: isDark ? 'Switch to light theme' : 'Switch to dark theme',
+            onPressed: () {
+              context
+                  .read<SettingsProvider>()
+                  .setThemeMode(isDark ? ThemeMode.light : ThemeMode.dark);
+            },
+          ),
+          IconButton(
+            icon: Icon(LucideIcons.settings,
+                size: 18, color: colors.textSecondary),
+            tooltip: 'Settings',
+            onPressed: () {
+              context.go('/settings');
+              context.read<AppStateProvider>().setCurrentRoute('/settings');
+            },
+          ),
+          const SizedBox(width: CsSpacing.xs),
+          PopupMenuButton<String>(
+            offset: const Offset(0, 44),
+            color: colors.surfaceElevated,
+            shape: RoundedRectangleBorder(
+              borderRadius: CsRadius.mediumBorder,
+              side: BorderSide(color: colors.border),
+            ),
+            icon: CircleAvatar(
+              radius: 14,
+              backgroundColor: CsColors.tint(colors.primary, alpha: 0.15),
+              child: Icon(LucideIcons.user, size: 14, color: colors.primary),
+            ),
+            onSelected: (value) {
+              if (value == 'logout') {
+                context.read<AuthProvider>().signOut();
+              }
+            },
+            itemBuilder: (BuildContext context) => [
+              PopupMenuItem<String>(
+                value: 'profile',
+                child: Row(
+                  children: [
+                    Icon(LucideIcons.user,
+                        size: 16, color: colors.textSecondary),
+                    const SizedBox(width: CsSpacing.sm),
+                    Text('Profile',
+                        style: text.body.copyWith(color: colors.textPrimary)),
+                  ],
                 ),
-                onSelected: (value) {
-                  if (value == 'logout') {
-                    context.read<AuthProvider>().signOut();
-                  }
-                },
-                itemBuilder: (BuildContext context) => [
-                  PopupMenuItem<String>(
-                    value: 'profile',
-                    child: Row(
-                      children: const [
-                        Icon(LucideIcons.user,
-                            size: 16, color: AppTheme.textSecondary),
-                        SizedBox(width: 8),
-                        Text('Profile',
-                            style: TextStyle(color: AppTheme.textPrimary)),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuDivider(),
-                  PopupMenuItem<String>(
-                    value: 'logout',
-                    child: Row(
-                      children: const [
-                        Icon(LucideIcons.logOut,
-                            size: 16, color: AppTheme.error),
-                        SizedBox(width: 8),
-                        Text('Logout', style: TextStyle(color: AppTheme.error)),
-                      ],
-                    ),
-                  ),
-                ],
+              ),
+              const PopupMenuDivider(),
+              PopupMenuItem<String>(
+                value: 'logout',
+                child: Row(
+                  children: [
+                    Icon(LucideIcons.logOut, size: 16, color: colors.error),
+                    const SizedBox(width: CsSpacing.sm),
+                    Text('Logout',
+                        style: text.body.copyWith(color: colors.error)),
+                  ],
+                ),
               ),
             ],
           ),

@@ -1,142 +1,98 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import '../../core/theme/app_theme.dart';
-import '../../providers/dashboard_provider.dart';
+import 'package:provider/provider.dart';
 
+import '../../providers/dashboard_provider.dart';
+import '../../widgets/common/common.dart';
+
+/// Risk summary for the session currently on screen.
+///
+/// A session that has not produced a score yet is rendered as Unknown. It must
+/// never fall back to a healthy-looking zero, because "no analysis yet" carries
+/// no evidence about safety.
 class ThreatScoreCard extends StatelessWidget {
   const ThreatScoreCard({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Consumer<DashboardProvider>(
-      builder: (context, dashboardProvider, _) {
-        final showCurrentSession = dashboardProvider.isCurrentSessionVisible;
+      builder: (context, dashboard, _) {
+        final colors = CsColors.of(context);
+        final text = CsTypography.of(context);
+
+        final showCurrentSession = dashboard.isCurrentSessionVisible;
         final score = showCurrentSession
-            ? dashboardProvider.currentSessionThreatScore
-            : dashboardProvider.lastSessionThreatScore;
+            ? dashboard.currentSessionThreatScore
+            : dashboard.lastSessionThreatScore;
         final hasScore = score != null;
         final displayScore = score ?? 0;
-        final color =
-            hasScore ? _getColor(displayScore) : AppTheme.textTertiary;
 
-        return Container(
-          padding: const EdgeInsets.all(AppTheme.spacing24),
-          decoration: BoxDecoration(
-            color: AppTheme.bgSecondary,
-            border: Border.all(color: AppTheme.borderPrimary),
-            borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-          ),
+        final state =
+            CsSemantics.severity(CsSemantics.severityFromScore(score), colors);
+        final accent = hasScore ? state.foreground : colors.textTertiary;
+
+        final statusLabel = !showCurrentSession
+            ? 'Monitoring inactive'
+            : dashboard.isStopping
+                ? 'Finalizing session'
+                : hasScore
+                    ? state.label
+                    : 'Monitoring active — analysis pending';
+
+        final description = hasScore
+            ? showCurrentSession
+                ? _riskDescription(displayScore)
+                : '${_riskDescription(displayScore)} — Last completed session'
+            : '';
+
+        return AppCard(
+          icon: LucideIcons.shield,
+          iconColor: accent,
+          title: 'Risk Level',
+          trailing: SeverityBadge.fromScore(score, size: CsBadgeSize.sm),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: color.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                    ),
-                    child: Icon(
-                      LucideIcons.shield,
-                      color: color,
-                      size: 22,
-                    ),
-                  ),
-                  Text(
-                    'RISK LEVEL',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppTheme.textTertiary,
-                      letterSpacing: 1.2,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
+              Text(
+                hasScore ? '${displayScore.toStringAsFixed(0)} / 100' : 'N/A',
+                style: text.metric.copyWith(color: colors.textPrimary),
               ),
-              const SizedBox(height: AppTheme.spacing16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    hasScore
-                        ? '${displayScore.toStringAsFixed(0)} / 100'
-                        : 'N/A',
-                    style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.textPrimary,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppTheme.spacing4),
+              const SizedBox(height: CsSpacing.xs),
               Text(
                 showCurrentSession
                     ? 'Threat Score'
                     : 'Last Session Threat Score',
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: AppTheme.textSecondary,
-                ),
+                style: text.bodySmall.copyWith(color: colors.textSecondary),
               ),
-              const SizedBox(height: AppTheme.spacing12),
-              Container(
-                height: 8,
-                decoration: BoxDecoration(
-                  color: AppTheme.borderPrimary,
-                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                ),
-                child: FractionallySizedBox(
-                  alignment: Alignment.centerLeft,
-                  widthFactor: hasScore ? displayScore / 100 : 0,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: color,
-                      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                    ),
-                  ),
-                ),
+              const SizedBox(height: CsSpacing.md),
+              _ScoreBar(
+                score: hasScore ? displayScore : null,
+                accent: accent,
+                colors: colors,
               ),
-              const SizedBox(height: AppTheme.spacing8),
+              const SizedBox(height: CsSpacing.sm),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    showCurrentSession
-                        ? (hasScore
-                            ? dashboardProvider.isStopping
-                                ? 'Finalizing session'
-                                : _getSeverityLabel(displayScore)
-                            : dashboardProvider.isStopping
-                                ? 'Finalizing session'
-                                : 'Monitoring active — analysis pending')
-                        : 'Monitoring inactive',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppTheme.textTertiary,
+                  Flexible(
+                    fit: FlexFit.loose,
+                    child: Text(
+                      statusLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style:
+                          text.bodySmall.copyWith(color: colors.textTertiary),
                     ),
                   ),
-                  const SizedBox(width: AppTheme.spacing8),
+                  const SizedBox(width: CsSpacing.sm),
                   Expanded(
                     child: Text(
-                      hasScore
-                          ? showCurrentSession
-                              ? _getRiskDescription(displayScore)
-                              : '${_getRiskDescription(displayScore)} — Last completed session'
-                          : '',
+                      description,
                       textAlign: TextAlign.right,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: color,
-                        fontWeight: FontWeight.w500,
-                      ),
+                      style: text.labelMedium.copyWith(color: accent),
                     ),
                   ),
                 ],
@@ -148,21 +104,37 @@ class ThreatScoreCard extends StatelessWidget {
     );
   }
 
-  String _getSeverityLabel(int score) {
-    if (score >= 70) return 'Critical';
-    if (score >= 40) return 'Medium';
-    return 'Low';
-  }
-
-  String _getRiskDescription(int score) {
+  String _riskDescription(int score) {
     if (score >= 70) return 'High Risk Detected';
     if (score >= 40) return 'Warning Risk Detected';
     return 'Low Risk';
   }
+}
 
-  Color _getColor(int score) {
-    if (score >= 70) return AppTheme.error;
-    if (score >= 40) return AppTheme.warning;
-    return AppTheme.success;
+class _ScoreBar extends StatelessWidget {
+  const _ScoreBar({
+    required this.score,
+    required this.accent,
+    required this.colors,
+  });
+
+  final int? score;
+  final Color accent;
+  final CsColors colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: CsRadius.smallBorder,
+      child: Container(
+        height: 8,
+        color: colors.backgroundTertiary,
+        alignment: Alignment.centerLeft,
+        child: FractionallySizedBox(
+          widthFactor: score == null ? 0 : (score! / 100).clamp(0.0, 1.0),
+          child: Container(color: accent),
+        ),
+      ),
+    );
   }
 }

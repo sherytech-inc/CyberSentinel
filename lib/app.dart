@@ -3,9 +3,17 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'core/router/app_router.dart';
-import 'core/theme/app_theme.dart';
 import 'providers/auth_provider.dart';
 import 'providers/settings_provider.dart';
+import 'widgets/common/common.dart';
+
+ThemeData _darkTheme() => CsTheme.dark(
+      textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
+    );
+
+ThemeData _lightTheme() => CsTheme.light(
+      textTheme: GoogleFonts.interTextTheme(ThemeData.light().textTheme),
+    );
 
 class CyberSentinelApp extends StatefulWidget {
   const CyberSentinelApp({super.key});
@@ -33,13 +41,8 @@ class _CyberSentinelAppState extends State<CyberSentinelApp> {
       // Initial loading splash before auth state is fully loaded
       return MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: ThemeData.dark()
-            .copyWith(scaffoldBackgroundColor: AppTheme.bgPrimary),
-        home: const Scaffold(
-          body: Center(
-            child: CircularProgressIndicator(color: AppTheme.primary),
-          ),
-        ),
+        theme: _darkTheme(),
+        home: const _StartupSplash(),
       );
     }
 
@@ -47,33 +50,39 @@ class _CyberSentinelAppState extends State<CyberSentinelApp> {
       title: 'CyberSentinel',
       debugShowCheckedModeBanner: false,
       themeMode: context.watch<SettingsProvider>().themeMode,
-      theme: ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.light,
-        scaffoldBackgroundColor: Colors.white,
-        textTheme: GoogleFonts.interTextTheme(
-          ThemeData.light().textTheme,
-        ),
-        colorScheme: ColorScheme.light(
-          primary: AppTheme.primary,
-          secondary: AppTheme.secondary,
-          surface: Colors.white,
-        ),
-      ),
-      darkTheme: ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: AppTheme.bgPrimary,
-        textTheme: GoogleFonts.interTextTheme(
-          ThemeData.dark().textTheme,
-        ),
-        colorScheme: ColorScheme.dark(
-          primary: AppTheme.primary,
-          secondary: AppTheme.secondary,
-          surface: AppTheme.bgPrimary,
-        ),
-      ),
+      theme: _lightTheme(),
+      darkTheme: _darkTheme(),
       routerConfig: _router,
+    );
+  }
+}
+
+class _StartupSplash extends StatelessWidget {
+  const _StartupSplash();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = CsColors.of(context);
+
+    return Scaffold(
+      backgroundColor: colors.backgroundPrimary,
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CyberSentinelLogo(size: 44),
+            const SizedBox(height: CsSpacing.xl),
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: colors.primary,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

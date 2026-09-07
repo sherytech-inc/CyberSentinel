@@ -7,6 +7,7 @@ import 'package:cybersentinel/widgets/dashboard/threat_score_card.dart';
 import 'package:cybersentinel/widgets/dashboard/traffic_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 class _InactiveDashboardProvider extends ChangeNotifier
@@ -136,7 +137,8 @@ void main() {
     expect(find.text('Safe'), findsNothing);
     expect(find.text('No Threats Detected'), findsNothing);
     expect(find.textContaining('currently secure'), findsNothing);
-    expect(find.byIcon(Icons.shield_outlined), findsOneWidget);
+    expect(find.byIcon(LucideIcons.shieldOff), findsOneWidget);
+    expect(find.byIcon(Icons.shield_outlined), findsNothing);
     expect(find.text('🛡'), findsNothing);
   });
 

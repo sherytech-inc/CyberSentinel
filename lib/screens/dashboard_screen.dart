@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:provider/provider.dart';
+
+// Only for `isMobile`. Its 1024px threshold is the one the dashboard has always
+// used and is deliberately not the same as `CsBreakpoints.compact` (768px);
+// switching it here would silently reflow every row on this screen.
 import '../core/theme/app_theme.dart';
 import '../providers/dashboard_provider.dart';
-import '../widgets/dashboard/threat_score_card.dart';
-import '../widgets/dashboard/kpi_card.dart';
-import '../widgets/dashboard/traffic_chart.dart';
+import '../widgets/common/common.dart';
 import '../widgets/dashboard/alerts_panel.dart';
-import '../widgets/dashboard/packet_classification.dart';
 import '../widgets/dashboard/malicious_ips_table.dart';
+import '../widgets/dashboard/packet_classification.dart';
+import '../widgets/dashboard/threat_score_card.dart';
+import '../widgets/dashboard/traffic_chart.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -18,15 +22,10 @@ class DashboardScreen extends StatelessWidget {
     return SingleChildScrollView(
       child: Column(
         children: [
-          // Row 1: KPI Cards
           _buildKPIRow(context),
-          const SizedBox(height: AppTheme.spacing16),
-
-          // Row 2: Traffic Chart + Alerts
+          const SizedBox(height: CsSpacing.xl),
           _buildTrafficAlertsRow(context),
-          const SizedBox(height: AppTheme.spacing16),
-
-          // Row 3: Packet Classification + Malicious IPs
+          const SizedBox(height: CsSpacing.xl),
           _buildPacketIPsRow(context),
         ],
       ),
@@ -45,6 +44,7 @@ class DashboardScreen extends StatelessWidget {
 
   Widget _buildKPIRow(BuildContext context) {
     final isMobile = AppTheme.isMobile(context);
+    final colors = CsColors.of(context);
 
     return Consumer<DashboardProvider>(
       builder: (context, dashboard, _) {
@@ -58,77 +58,57 @@ class DashboardScreen extends StatelessWidget {
             active ? 'Current Session Analyzed' : 'Last Session Analyzed';
         final fourthLabel =
             active ? 'Pending Analysis' : 'Last Session Analysis Completion';
+
+        // Null, not the string 'N/A': a session that captured nothing has no
+        // completion rate, and MetricCard renders that muted rather than in the
+        // same weight as a real number.
         final fourthValue = active
             ? pending
             : dashboard.capturedPacketsCount == 0
-                ? 'N/A'
+                ? null
                 : '${(dashboard.analysisCompletion * 100).toStringAsFixed(1)}%';
+
+        final cards = <Widget>[
+          MetricCard(
+            icon: LucideIcons.network,
+            label: capturedLabel,
+            value: captured,
+            iconColor: colors.info,
+          ),
+          MetricCard(
+            icon: LucideIcons.activity,
+            label: analyzedLabel,
+            value: analyzed,
+            iconColor: colors.info,
+          ),
+          MetricCard(
+            icon: LucideIcons.clock,
+            label: fourthLabel,
+            value: fourthValue,
+            iconColor: colors.warning,
+          ),
+        ];
 
         if (isMobile) {
           return Column(
             children: [
               const ThreatScoreCard(),
-              const SizedBox(height: AppTheme.spacing16),
-              KPICard(
-                icon: LucideIcons.triangleAlert,
-                label: capturedLabel,
-                value: captured,
-                iconColor: AppTheme.info,
-                iconBg: AppTheme.info.withOpacity(0.1),
-              ),
-              const SizedBox(height: AppTheme.spacing16),
-              KPICard(
-                icon: LucideIcons.activity,
-                label: analyzedLabel,
-                value: analyzed,
-                iconColor: AppTheme.info,
-                iconBg: AppTheme.info.withOpacity(0.1),
-              ),
-              const SizedBox(height: AppTheme.spacing16),
-              KPICard(
-                icon: LucideIcons.clock,
-                label: fourthLabel,
-                value: fourthValue,
-                iconColor: AppTheme.warning,
-                iconBg: AppTheme.warning.withOpacity(0.1),
-              ),
+              for (final card in cards) ...[
+                const SizedBox(height: CsSpacing.xl),
+                card,
+              ],
             ],
           );
         }
 
         return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Expanded(child: ThreatScoreCard()),
-            const SizedBox(width: AppTheme.spacing16),
-            Expanded(
-              child: KPICard(
-                icon: LucideIcons.triangleAlert,
-                label: capturedLabel,
-                value: captured,
-                iconColor: AppTheme.info,
-                iconBg: AppTheme.info.withOpacity(0.1),
-              ),
-            ),
-            const SizedBox(width: AppTheme.spacing16),
-            Expanded(
-              child: KPICard(
-                icon: LucideIcons.activity,
-                label: analyzedLabel,
-                value: analyzed,
-                iconColor: AppTheme.info,
-                iconBg: AppTheme.info.withOpacity(0.1),
-              ),
-            ),
-            const SizedBox(width: AppTheme.spacing16),
-            Expanded(
-              child: KPICard(
-                icon: LucideIcons.clock,
-                label: fourthLabel,
-                value: fourthValue,
-                iconColor: AppTheme.warning,
-                iconBg: AppTheme.warning.withOpacity(0.1),
-              ),
-            ),
+            for (final card in cards) ...[
+              const SizedBox(width: CsSpacing.xl),
+              Expanded(child: card),
+            ],
           ],
         );
       },
@@ -136,63 +116,43 @@ class DashboardScreen extends StatelessWidget {
   }
 
   Widget _buildTrafficAlertsRow(BuildContext context) {
-    final isMobile = AppTheme.isMobile(context);
-
-    if (isMobile) {
-      return Column(
+    if (AppTheme.isMobile(context)) {
+      return const Column(
         children: [
-          const TrafficChart(),
-          const SizedBox(height: AppTheme.spacing16),
-          const AlertsPanel(),
+          TrafficChart(),
+          SizedBox(height: CsSpacing.xl),
+          AlertsPanel(),
         ],
       );
     }
 
-    return Row(
+    return const Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Expanded(
-          flex: 2,
-          child: TrafficChart(),
-        ),
-        const SizedBox(width: AppTheme.spacing16),
-        const Expanded(
-          flex: 1,
-          child: Column(
-            children: [
-              AlertsPanel(),
-            ],
-          ),
-        ),
+        Expanded(flex: 2, child: TrafficChart()),
+        SizedBox(width: CsSpacing.xl),
+        Expanded(flex: 1, child: AlertsPanel()),
       ],
     );
   }
 
   Widget _buildPacketIPsRow(BuildContext context) {
-    final isMobile = AppTheme.isMobile(context);
-
-    if (isMobile) {
-      return Column(
+    if (AppTheme.isMobile(context)) {
+      return const Column(
         children: [
-          const PacketClassification(),
-          const SizedBox(height: AppTheme.spacing16),
-          const MaliciousIPsTable(),
+          PacketClassification(),
+          SizedBox(height: CsSpacing.xl),
+          MaliciousIPsTable(),
         ],
       );
     }
 
-    return Row(
+    return const Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Expanded(
-          flex: 1,
-          child: PacketClassification(),
-        ),
-        const SizedBox(width: AppTheme.spacing16),
-        const Expanded(
-          flex: 2,
-          child: MaliciousIPsTable(),
-        ),
+        Expanded(flex: 1, child: PacketClassification()),
+        SizedBox(width: CsSpacing.xl),
+        Expanded(flex: 2, child: MaliciousIPsTable()),
       ],
     );
   }

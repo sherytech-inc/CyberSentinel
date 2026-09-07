@@ -1,9 +1,24 @@
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'dart:math' as math;
-import '../../core/theme/app_theme.dart';
+
+import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:provider/provider.dart';
+
 import '../../providers/dashboard_provider.dart';
+import '../../widgets/common/common.dart';
+
+/// One plotted line in the traffic chart.
+///
+/// Keeping the label next to the colour means the tooltip can look a series up
+/// by index instead of comparing rendered colours for equality.
+class _TrafficSeries {
+  const _TrafficSeries(this.label, this.color, this.valueOf);
+
+  final String label;
+  final Color color;
+  final int Function(TrafficData point) valueOf;
+}
 
 class TrafficChart extends StatelessWidget {
   const TrafficChart({super.key});
@@ -12,13 +27,28 @@ class TrafficChart extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<DashboardProvider>(
       builder: (context, provider, _) {
-        return Container(
-          padding: const EdgeInsets.all(AppTheme.spacing24),
-          decoration: BoxDecoration(
-            color: AppTheme.bgSecondary,
-            border: Border.all(color: AppTheme.borderPrimary),
-            borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-          ),
+        final colors = CsColors.of(context);
+        final text = CsTypography.of(context);
+        final showCurrentSession = provider.isCurrentSessionVisible;
+
+        final normal = _TrafficSeries(
+            'Normal', colors.severityNormal, (point) => point.normal);
+        final suspicious = _TrafficSeries(
+            'Suspicious', colors.severitySuspicious, (point) => point.suspicious);
+        final malicious = _TrafficSeries(
+            'Malicious', colors.severityMalicious, (point) => point.malicious);
+        final pending = _TrafficSeries(
+          showCurrentSession ? 'Pending' : 'Not analyzed',
+          colors.severityPending,
+          (point) => point.pending,
+        );
+
+        // Drawing order is preserved from the original so the dominant
+        // "normal" line still paints on top at crossings.
+        final bars = <_TrafficSeries>[pending, malicious, suspicious, normal];
+        final legend = <_TrafficSeries>[normal, suspicious, malicious, pending];
+
+        return AppCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -31,311 +61,77 @@ class TrafficChart extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          provider.isCurrentSessionVisible
+                          showCurrentSession
                               ? 'Real-Time Network Traffic'
                               : 'Last Session Overview',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.textPrimary,
-                          ),
+                          style: text.title.copyWith(color: colors.textPrimary),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: CsSpacing.xs),
                         Text(
-                          provider.isCurrentSessionVisible
+                          showCurrentSession
                               ? provider.isStopping
                                   ? 'Finalizing current-session analysis'
                                   : 'Packets per update'
                               : 'Final classification and analysis distribution',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: AppTheme.textSecondary,
-                          ),
+                          style: text.bodySmall
+                              .copyWith(color: colors.textSecondary),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(width: AppTheme.spacing16),
+                  const SizedBox(width: CsSpacing.lg),
                   Flexible(
                     flex: 3,
                     child: Wrap(
                       alignment: WrapAlignment.end,
-                      spacing: AppTheme.spacing16,
-                      runSpacing: AppTheme.spacing8,
+                      spacing: CsSpacing.lg,
+                      runSpacing: CsSpacing.sm,
                       children: [
-                        _buildLegendItem('Normal', AppTheme.success),
-                        _buildLegendItem('Suspicious', AppTheme.warning),
-                        _buildLegendItem('Malicious', AppTheme.error),
-                        _buildLegendItem(
-                          provider.isCurrentSessionVisible
-                              ? 'Pending'
-                              : 'Not analyzed',
-                          AppTheme.primary,
-                        ),
+                        for (final series in legend)
+                          _LegendItem(series: series, text: text, colors: colors),
                       ],
                     ),
                   ),
                 ],
               ),
-              if (!provider.isCurrentSessionVisible &&
-                  provider.lastSession != null)
+              if (!showCurrentSession && provider.lastSession != null)
                 Padding(
-                  padding: const EdgeInsets.only(top: AppTheme.spacing16),
+                  padding: const EdgeInsets.only(top: CsSpacing.lg),
                   child: Wrap(
-                    spacing: AppTheme.spacing24,
-                    runSpacing: AppTheme.spacing8,
+                    spacing: CsSpacing.xl,
+                    runSpacing: CsSpacing.sm,
                     children: [
-                      _buildSessionMetric(
-                          'Captured', provider.capturedPacketsCount.toString()),
-                      _buildSessionMetric(
-                          'Analyzed', provider.analyzedPacketsCount.toString()),
-                      _buildSessionMetric(
-                        'Analysis Completion',
-                        '${(provider.analysisCompletion * 100).toStringAsFixed(1)}%',
+                      _SessionMetric(
+                          label: 'Captured',
+                          value: provider.capturedPacketsCount.toString()),
+                      _SessionMetric(
+                          label: 'Analyzed',
+                          value: provider.analyzedPacketsCount.toString()),
+                      _SessionMetric(
+                        label: 'Analysis Completion',
+                        value:
+                            '${(provider.analysisCompletion * 100).toStringAsFixed(1)}%',
                       ),
-                      _buildSessionMetric('Highest Severity',
-                          provider.lastSession?.highestSeverity ?? 'N/A'),
+                      _SessionMetric(
+                        label: 'Highest Severity',
+                        badge: SeverityBadge.fromString(
+                          provider.lastSession?.highestSeverity,
+                          size: CsBadgeSize.sm,
+                        ),
+                      ),
                     ],
                   ),
                 ),
-              const SizedBox(height: AppTheme.spacing24),
+              const SizedBox(height: CsSpacing.xl),
               SizedBox(
                 height: 350,
-                child: () {
-                  if (!provider.isCurrentSessionVisible &&
-                      provider.lastSession == null) {
-                    return const Center(
-                      child: Text('No completed session data available',
-                          style: TextStyle(color: AppTheme.textSecondary)),
-                    );
-                  }
-                  if (provider.trafficData.length < 2) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            provider.isCurrentSessionVisible
-                                ? 'Monitoring active — collecting traffic'
-                                : 'Waiting for live packet capture',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: AppTheme.textSecondary,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-
-                  double maxVal = 10.0;
-                  for (var d in provider.trafficData) {
-                    final double val = math.max(
-                        d.pending.toDouble(),
-                        math.max(
-                            d.normal.toDouble(),
-                            math.max(d.suspicious.toDouble(),
-                                d.malicious.toDouble())));
-                    if (val > maxVal) {
-                      maxVal = val;
-                    }
-                  }
-                  final double maxY = maxVal * 1.2;
-                  final double leftInterval =
-                      (maxY / 5).roundToDouble().clamp(1.0, double.infinity);
-
-                  final int dataLength = provider.trafficData.length;
-                  final double maxXVal =
-                      dataLength > 1 ? (dataLength - 1).toDouble() : 1.0;
-
-                  return LineChart(
-                    LineChartData(
-                      gridData: FlGridData(
-                        show: true,
-                        drawVerticalLine: false,
-                        horizontalInterval: leftInterval,
-                        getDrawingHorizontalLine: (value) {
-                          return FlLine(
-                            color: AppTheme.borderPrimary,
-                            strokeWidth: 1,
-                            dashArray: [3, 3],
-                          );
-                        },
-                      ),
-                      titlesData: FlTitlesData(
-                        show: true,
-                        rightTitles: AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
-                        topTitles: AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
-                        bottomTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize: 30,
-                            interval: dataLength <= 8 ? 1 : 5,
-                            getTitlesWidget: (value, meta) {
-                              if (value.toInt() >= 0 &&
-                                  value.toInt() < dataLength) {
-                                if (dataLength <= 8 || value.toInt() % 6 == 0) {
-                                  return Padding(
-                                    padding: const EdgeInsets.only(top: 8.0),
-                                    child: Text(
-                                      provider.trafficData[value.toInt()].time,
-                                      style: const TextStyle(
-                                        color: AppTheme.textTertiary,
-                                        fontSize: 11,
-                                      ),
-                                    ),
-                                  );
-                                }
-                              }
-                              return const SizedBox();
-                            },
-                          ),
-                        ),
-                        leftTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize: 42,
-                            interval: leftInterval,
-                            getTitlesWidget: (value, meta) {
-                              return Text(
-                                value.toInt().toString(),
-                                style: const TextStyle(
-                                  color: AppTheme.textTertiary,
-                                  fontSize: 11,
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                      lineTouchData: LineTouchData(
-                        touchTooltipData: LineTouchTooltipData(
-                          tooltipBgColor: AppTheme.bgSecondary,
-                          getTooltipItems: (touchedSpots) {
-                            if (touchedSpots.isEmpty) return [];
-
-                            final int index = touchedSpots.first.x.toInt();
-                            final time = index >= 0 &&
-                                    index < provider.trafficData.length
-                                ? provider.trafficData[index].time
-                                : '';
-
-                            return touchedSpots.map((spot) {
-                              final textStyle = TextStyle(
-                                color: spot.bar.color,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              );
-
-                              String label = '';
-                              if (spot.bar.color == AppTheme.success)
-                                label = 'Normal: ';
-                              else if (spot.bar.color == AppTheme.warning)
-                                label = 'Suspicious: ';
-                              else if (spot.bar.color == AppTheme.error)
-                                label = 'Malicious: ';
-                              else if (spot.bar.color == AppTheme.primary)
-                                label = 'Pending: ';
-
-                              if (spot == touchedSpots.first) {
-                                return LineTooltipItem(
-                                  '$time\n',
-                                  const TextStyle(
-                                      color: AppTheme.textPrimary,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12),
-                                  children: [
-                                    TextSpan(
-                                        text: '$label${spot.y.toInt()}',
-                                        style: textStyle),
-                                  ],
-                                );
-                              }
-                              return LineTooltipItem(
-                                  '$label${spot.y.toInt()}', textStyle);
-                            }).toList();
-                          },
-                        ),
-                      ),
-                      borderData: FlBorderData(show: false),
-                      minX: 0,
-                      maxX: maxXVal,
-                      minY: 0,
-                      maxY: maxY,
-                      lineBarsData: [
-                        LineChartBarData(
-                          spots: provider.trafficData
-                              .asMap()
-                              .entries
-                              .map((e) => FlSpot(
-                                    e.key.toDouble(),
-                                    e.value.pending.toDouble(),
-                                  ))
-                              .toList(),
-                          isCurved: false,
-                          color: AppTheme.primary,
-                          barWidth: 2,
-                          isStrokeCapRound: true,
-                          dotData: FlDotData(show: false),
-                          belowBarData: BarAreaData(show: false),
-                        ),
-                        LineChartBarData(
-                          spots: provider.trafficData
-                              .asMap()
-                              .entries
-                              .map((e) => FlSpot(
-                                    e.key.toDouble(),
-                                    e.value.malicious.toDouble(),
-                                  ))
-                              .toList(),
-                          isCurved: false,
-                          color: AppTheme.error,
-                          barWidth: 2,
-                          isStrokeCapRound: true,
-                          dotData: FlDotData(show: false),
-                          belowBarData: BarAreaData(show: false),
-                        ),
-                        LineChartBarData(
-                          spots: provider.trafficData
-                              .asMap()
-                              .entries
-                              .map((e) => FlSpot(
-                                    e.key.toDouble(),
-                                    e.value.suspicious.toDouble(),
-                                  ))
-                              .toList(),
-                          isCurved: false,
-                          color: AppTheme.warning,
-                          barWidth: 2,
-                          isStrokeCapRound: true,
-                          dotData: FlDotData(show: false),
-                          belowBarData: BarAreaData(show: false),
-                        ),
-                        LineChartBarData(
-                          spots: provider.trafficData
-                              .asMap()
-                              .entries
-                              .map((e) => FlSpot(
-                                    e.key.toDouble(),
-                                    e.value.normal.toDouble(),
-                                  ))
-                              .toList(),
-                          isCurved: false,
-                          color: AppTheme.success,
-                          barWidth: 2,
-                          isStrokeCapRound: true,
-                          dotData: FlDotData(show: false),
-                          belowBarData: BarAreaData(show: false),
-                        ),
-                      ],
-                    ),
-                  );
-                }(),
+                child: _buildPlot(
+                  provider: provider,
+                  showCurrentSession: showCurrentSession,
+                  bars: bars,
+                  colors: colors,
+                  text: text,
+                ),
               ),
             ],
           ),
@@ -344,50 +140,237 @@ class TrafficChart extends StatelessWidget {
     );
   }
 
-  static Widget _buildSessionMetric(String label, String value) {
-    return Container(
-      width: 150,
-      padding: const EdgeInsets.all(AppTheme.spacing16),
-      decoration: BoxDecoration(
-        color: AppTheme.bgPrimary,
-        border: Border.all(color: AppTheme.borderPrimary),
-        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+  Widget _buildPlot({
+    required DashboardProvider provider,
+    required bool showCurrentSession,
+    required List<_TrafficSeries> bars,
+    required CsColors colors,
+    required CsTextStyles text,
+  }) {
+    if (!showCurrentSession && provider.lastSession == null) {
+      return const EmptyState(
+        icon: LucideIcons.chartSpline,
+        title: 'No completed session data available',
+        description: 'Traffic history appears after a capture session ends.',
+        compact: true,
+      );
+    }
+
+    final data = provider.trafficData;
+    if (data.length < 2) {
+      return EmptyState(
+        icon: LucideIcons.activity,
+        title: showCurrentSession
+            ? 'Monitoring active — collecting traffic'
+            : 'Waiting for live packet capture',
+        description: showCurrentSession
+            ? 'The chart starts once more than one update has arrived.'
+            : null,
+        compact: true,
+      );
+    }
+
+    double maxVal = 10.0;
+    for (final point in data) {
+      for (final series in bars) {
+        maxVal = math.max(maxVal, series.valueOf(point).toDouble());
+      }
+    }
+    final double maxY = maxVal * 1.2;
+    final double leftInterval =
+        (maxY / 5).roundToDouble().clamp(1.0, double.infinity);
+
+    final int dataLength = data.length;
+    final double maxXVal = dataLength > 1 ? (dataLength - 1).toDouble() : 1.0;
+
+    return LineChart(
+      LineChartData(
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: false,
+          horizontalInterval: leftInterval,
+          getDrawingHorizontalLine: (value) => FlLine(
+            color: colors.border,
+            strokeWidth: 1,
+            dashArray: const [3, 3],
+          ),
+        ),
+        titlesData: FlTitlesData(
+          show: true,
+          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 30,
+              interval: dataLength <= 8 ? 1 : 5,
+              getTitlesWidget: (value, meta) {
+                final index = value.toInt();
+                if (index < 0 || index >= dataLength) return const SizedBox();
+                if (dataLength > 8 && index % 6 != 0) return const SizedBox();
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: Text(
+                    data[index].time,
+                    style: text.caption.copyWith(color: colors.textTertiary),
+                  ),
+                );
+              },
+            ),
+          ),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 42,
+              interval: leftInterval,
+              getTitlesWidget: (value, meta) => Text(
+                value.toInt().toString(),
+                style: text.caption.copyWith(color: colors.textTertiary),
+              ),
+            ),
+          ),
+        ),
+        lineTouchData: LineTouchData(
+          touchTooltipData: LineTouchTooltipData(
+            tooltipBgColor: colors.surfaceElevated,
+            getTooltipItems: (touchedSpots) {
+              if (touchedSpots.isEmpty) return [];
+
+              final int index = touchedSpots.first.x.toInt();
+              final time =
+                  index >= 0 && index < dataLength ? data[index].time : '';
+
+              return touchedSpots.map((spot) {
+                final series = bars[spot.barIndex];
+                final valueStyle = TextStyle(
+                  color: series.color,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                );
+                final label = '${series.label}: ${spot.y.toInt()}';
+
+                if (spot != touchedSpots.first) {
+                  return LineTooltipItem(label, valueStyle);
+                }
+                return LineTooltipItem(
+                  '$time\n',
+                  TextStyle(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                  children: [TextSpan(text: label, style: valueStyle)],
+                );
+              }).toList();
+            },
+          ),
+        ),
+        borderData: FlBorderData(show: false),
+        minX: 0,
+        maxX: maxXVal,
+        minY: 0,
+        maxY: maxY,
+        lineBarsData: [
+          for (final series in bars)
+            LineChartBarData(
+              spots: [
+                for (var i = 0; i < dataLength; i++)
+                  FlSpot(i.toDouble(), series.valueOf(data[i]).toDouble()),
+              ],
+              isCurved: false,
+              color: series.color,
+              barWidth: 2,
+              isStrokeCapRound: true,
+              dotData: const FlDotData(show: false),
+              belowBarData: BarAreaData(show: false),
+            ),
+        ],
       ),
-      child: Column(children: [
-        Text(value,
-            style: const TextStyle(
-                color: AppTheme.textPrimary,
-                fontSize: 22,
-                fontWeight: FontWeight.w700)),
-        const SizedBox(height: 4),
-        Text(label,
-            textAlign: TextAlign.center,
-            style:
-                const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-      ]),
     );
   }
+}
 
-  Widget _buildLegendItem(String label, Color color) {
+class _LegendItem extends StatelessWidget {
+  const _LegendItem({
+    required this.series,
+    required this.text,
+    required this.colors,
+  });
+
+  final _TrafficSeries series;
+  final CsTextStyles text;
+  final CsColors colors;
+
+  @override
+  Widget build(BuildContext context) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Container(
           width: 12,
           height: 12,
           decoration: BoxDecoration(
-            color: color,
+            color: series.color,
             shape: BoxShape.circle,
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: CsSpacing.sm),
         Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: AppTheme.textSecondary,
-          ),
+          series.label,
+          style: text.bodySmall.copyWith(color: colors.textSecondary),
         ),
       ],
+    );
+  }
+}
+
+/// Compact inset tile. Deliberately not an [AppCard]: it sits inside one, and a
+/// card nested in a card would double the border and padding rhythm.
+class _SessionMetric extends StatelessWidget {
+  const _SessionMetric({required this.label, this.value, this.badge});
+
+  final String label;
+
+  /// Numeric readout. Mutually exclusive with [badge].
+  final String? value;
+
+  /// Used instead of [value] when the tile holds a severity rather than a count.
+  final Widget? badge;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = CsColors.of(context);
+    final text = CsTypography.of(context);
+
+    return Container(
+      width: 150,
+      padding: const EdgeInsets.all(CsSpacing.lg),
+      decoration: BoxDecoration(
+        color: colors.backgroundTertiary,
+        border: Border.all(color: colors.border),
+        borderRadius: CsRadius.mediumBorder,
+      ),
+      child: Column(
+        children: [
+          if (badge != null)
+            badge!
+          else
+            Text(
+              value ?? 'N/A',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: text.headline.copyWith(
+                color: value == null ? colors.textTertiary : colors.textPrimary,
+              ),
+            ),
+          const SizedBox(height: CsSpacing.xs),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: text.bodySmall.copyWith(color: colors.textSecondary),
+          ),
+        ],
+      ),
     );
   }
 }

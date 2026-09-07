@@ -1,5 +1,26 @@
 import 'package:flutter/material.dart';
 
+/// Legacy design constants, retained as a compatibility facade.
+///
+/// Every value here is the frozen dark-only palette and is still referenced by
+/// roughly a thousand existing call sites across `lib/screens` and
+/// `lib/widgets/dashboard`. The values are intentionally **unchanged** so that
+/// screens that have not been migrated yet render exactly as they did before.
+///
+/// These constants are `static const` and therefore cannot vary with the active
+/// [ThemeData] — this is why the light theme cannot be driven from them.
+///
+/// New code, and any screen being migrated, must use the theme-aware semantic
+/// tokens instead:
+///
+/// ```dart
+/// final colors = CsColors.of(context);
+/// final text = CsTypography.of(context);
+/// ```
+///
+/// See `cs_colors.dart`, `cs_typography.dart`, `cs_layout.dart` and
+/// `cs_theme.dart`. Migrated call sites should be deleted from here once no
+/// screen references them.
 class AppTheme {
   // Colors
   static const Color bgPrimary = Color(0xFF0A0E1A);
